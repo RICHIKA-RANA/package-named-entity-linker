@@ -1,0 +1,45 @@
+[project]
+name = "package-named-entity-linker"
+version = "3.0.0"
+description = "Links detected named entities in text to their corresponding canonical entities in a knowledge base for accurate identification and disambiguation."
+authors = [
+    { name = "immkg", email = "mayank.g@smarter.codes" }
+]
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+
+[tool.poetry]
+packages = [
+    { include = "talkingdb_nel" }
+]
+
+[tool.poetry.dependencies]
+python = ">=3.12,<3.14"
+
+fastapi = ">=0.125.0,<0.126.0"
+uvicorn = { version = ">=0.38.0,<0.39.0", extras = ["standard"] }
+requests = ">=2.32.5,<3.0.0"
+pydantic = ">=2.12.5,<3.0.0"
+debugpy = ">=1.8.19,<2.0.0"
+
+talkingdb-models = { git = "git+https://github.com/TalkingDB/base-tdb-models.git", rev = "5b10d693758b281d0a474bb09dd8ca4238dcb080" }
+talkingdb-clients = { git = "git+https://github.com/TalkingDB/base-tdb-clients.git", rev = "2cec542cf24b70a46d174f633dd4b042f20aa4cf" }
+talkingdb-helpers = { git = "git+https://github.com/TalkingDB/base-tdb-helpers.git", rev = "18ccca0d5c500f39c55f87ea6cc26d83183fd912" }
+
+redis = "^7.4.0"
+networkx = "^3.6.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.4"
+pytest-cov = "^7.0"
+pytest-mock = "^3.15"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+]
