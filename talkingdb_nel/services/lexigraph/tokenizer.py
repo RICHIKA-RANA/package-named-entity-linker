@@ -8,9 +8,7 @@ class Tokenizer:
         r"""[\.’'\[\](){}⟨⟩:,،、‒–—―…!.‹›«»‐\-?‘’“”";/⁄·&*@•^†‡°¡¿※#№÷×ºª%‰+−=‱¶′″‴§~_|‖¦©℗®℠™¤₳฿₵¢₡₢$₫₯֏₠€ƒ₣₲₴₭₺₾ℳ₥₦₧₱₰£៛₽₹₨₪৳₸₮₩¥]"""
     )
 
-    _NUMBER_RE = re.compile(
-        r"-?\d+(?:[\d,])*(?:\.\d+)?"
-    )
+    _NUMBER_RE = re.compile(r"-?\d+(?:[\d,])*(?:\.\d+)?")
 
     _CAMEL_RE = re.compile(
         r".+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)"
@@ -40,8 +38,7 @@ class Tokenizer:
             results.append(token)
 
     @staticmethod
-    def tokenize(message):
-        message = message.replace("-", " - ")
+    def tokenize(message, include_subtokens=True):
 
         results = []
         seen = set()
@@ -51,36 +48,22 @@ class Tokenizer:
             start = match.start()
             end = match.end() - 1
 
+            # Primary token
             Tokenizer._add(results, seen, text, start, end)
+
+            if not include_subtokens:
+                continue
 
             # punctuation + left/right fragments
             for punct in Tokenizer._PUNCT_RE.finditer(text):
                 p_start = start + punct.start()
                 p_end = start + punct.end() - 1
 
+                Tokenizer._add(results, seen, punct.group(), p_start, p_end)
                 Tokenizer._add(
-                    results,
-                    seen,
-                    punct.group(),
-                    p_start,
-                    p_end,
-                )
-
+                    results, seen, text[:punct.start()], start, p_start)
                 Tokenizer._add(
-                    results,
-                    seen,
-                    text[: punct.start()],
-                    start,
-                    p_start,
-                )
-
-                Tokenizer._add(
-                    results,
-                    seen,
-                    text[punct.end():],
-                    p_end + 1,
-                    end,
-                )
+                    results, seen, text[punct.end():], p_end + 1, end)
 
             # numbers
             for number in Tokenizer._NUMBER_RE.finditer(text):
