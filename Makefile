@@ -8,6 +8,9 @@ MODE ?= $(DEFAULT_MODE)
 local:
 	poetry run python -m debugpy --listen 0.0.0.0:5692 -m uvicorn talkingdb_nel.main:app --host 0.0.0.0 --port 8092 --reload --reload-dir ./ --reload-dir ../base-tdb-models --reload-dir ../base-tdb-clients --reload-dir ../base-tdb-helpers
 
+test:
+	poetry run pytest
+
 sync:
 	@echo "🔄 Running sync_git_deps.py with mode: $(MODE)"
 	python3 sync_git_deps.py --mode "$(MODE)"
