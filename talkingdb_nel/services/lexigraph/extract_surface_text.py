@@ -788,7 +788,7 @@ class SurfaceTextExtractor:
                         state.crossed_breakpoint = True
 
             next_queue.clear()
-            
+
             #
             # Process current token.
             #

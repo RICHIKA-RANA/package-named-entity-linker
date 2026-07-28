@@ -48,6 +48,15 @@ class FakePhraseSpell:
             "new york": [
                 FakePhraseSuggestion("new york"),
             ],
+            "very": [
+                FakePhraseSuggestion("very"),
+            ],
+            "good": [
+                FakePhraseSuggestion("good"),
+            ],
+            "very good": [
+                FakePhraseSuggestion("very good"),
+            ],
         }
 
         return phrases.get(
@@ -216,3 +225,103 @@ def test_no_match_returns_empty(
     )
 
     assert result == []
+
+
+def test_word_correction_disabled(
+    extractor,
+):
+
+    result = extractor.extract(
+        "nwe york",
+        [],
+        word_correction=False,
+    )
+
+    assert not any(
+        item["corrected_text"] == "new york"
+        for item in result
+    )
+
+
+def test_phrase_expires_after_large_gap(
+    extractor,
+):
+
+    result = extractor.extract(
+        "new hello hello hello hello york",
+        [],
+    )
+
+    assert not any(
+        item["corrected_text"] == "new york"
+        for item in result
+    )
+
+
+def test_case_insensitive(
+    extractor,
+):
+
+    result = extractor.extract(
+        "NEW YORK",
+        [],
+    )
+
+    assert any(
+        item["corrected_text"] == "new york"
+        for item in result
+    )
+
+
+def test_duplicate_phrase_not_returned_twice(
+    extractor,
+):
+
+    result = extractor.extract(
+        "new york",
+        [],
+    )
+
+    matches = [
+        item
+        for item in result
+        if item["corrected_text"] == "new york"
+    ]
+
+    assert len(matches) == 1
+
+
+def test_repeated_words(
+    extractor,
+):
+
+    result = extractor.extract(
+        "very very good",
+        [],
+    )
+
+    matches = [
+        item
+        for item in result
+        if item["corrected_text"] == "very good"
+    ]
+
+    assert len(matches) == 1
+
+
+def test_overlapping_phrases(
+    extractor,
+):
+
+    result = extractor.extract(
+        "new york",
+        [],
+    )
+
+    corrected = {
+        item["corrected_text"]
+        for item in result
+    }
+
+    assert "new" in corrected
+    assert "new york" in corrected
