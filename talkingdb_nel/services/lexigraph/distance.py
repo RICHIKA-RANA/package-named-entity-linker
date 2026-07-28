@@ -1,3 +1,9 @@
+def get_distance(seq1, seq2, seqType='w'):
+    if (seqType == 's'):
+        seq1 = seq1.split(' ')
+        seq2 = seq2.split(' ')
+    return damerau_levenshtein(seq1, seq2)
+
 def damerau_levenshtein(seq1, seq2):
     """
     Compute the Damerau-Levenshtein distance.
