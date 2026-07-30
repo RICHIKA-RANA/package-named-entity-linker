@@ -193,7 +193,7 @@ class SurfaceTextExtractor:
             word = token.text
 
             if word not in cache:
-                suggestions = self.word_spell.lookup(
+                suggestions = self.word_spell.get_suggestions(
                     word,
                     max_edit_distance=lookup_distance,
                     least_word_suggestions=least_each_word_suggestions,
@@ -263,7 +263,7 @@ class SurfaceTextExtractor:
 
             if key not in cache:
 
-                suggestions = self.phrase_spell.lookup_phrase(
+                suggestions = self.phrase_spell.get_suggestions(
                     key,
                     max_edit_distance=0,
                 )
@@ -700,9 +700,9 @@ class SurfaceTextExtractor:
 
             entities = []
 
-            suggestion = self.phrase_spell.lookup_exact(match.phrase)
-            if suggestion is not None:
-                entities = suggestion.entities
+            suggestions = self.phrase_spell.get_suggestions(match.phrase)
+            if suggestions is not None:
+                entities = suggestions
 
             results.append(
                 {

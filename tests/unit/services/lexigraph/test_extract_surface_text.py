@@ -6,7 +6,7 @@ from talkingdb_nel.services.lexigraph.extract_surface_text import (
 
 
 class FakeWordSpell:
-    def lookup(
+    def get_suggestions(
         self,
         word,
         max_edit_distance,
@@ -21,7 +21,6 @@ class FakeWordSpell:
 
 
 class FakePhraseSuggestion:
-
     def __init__(self, term):
         self.term = term
         self.entities = [
@@ -32,53 +31,45 @@ class FakePhraseSuggestion:
 
 
 class FakePhraseSpell:
-
-    def lookup_phrase(
-        self,
-        phrase,
-        max_edit_distance,
-    ):
-        phrases = {
-            "new": [
-                FakePhraseSuggestion("new"),
-            ],
-            "york": [
-                FakePhraseSuggestion("york"),
-            ],
-            "new york": [
-                FakePhraseSuggestion("new york"),
-            ],
-            "very": [
-                FakePhraseSuggestion("very"),
-            ],
-            "good": [
-                FakePhraseSuggestion("good"),
-            ],
-            "very good": [
-                FakePhraseSuggestion("very good"),
-            ],
+    def __init__(self):
+        self._phrases = {
+            "new": FakePhraseSuggestion("new"),
+            "york": FakePhraseSuggestion("york"),
+            "new york": FakePhraseSuggestion("new york"),
+            "very": FakePhraseSuggestion("very"),
+            "good": FakePhraseSuggestion("good"),
+            "very good": FakePhraseSuggestion("very good"),
         }
 
-        return phrases.get(
-            phrase.lower(),
-            [],
-        )
+    def get_suggestions(
+        self,
+        phrase,
+        max_edit_distance=None,
+    ):
+        phrase = phrase.lower()
+
+        if phrase not in self._phrases:
+            return []
+
+        # Match SentenceSymSpell API:
+        # (surface_text, (frequency, edit_distance))
+        return [
+            (
+                phrase,
+                (
+                    100,
+                    0,
+                ),
+            )
+        ]
 
     def lookup_exact(
         self,
         phrase,
     ):
-        if phrase == "new york":
-            return FakePhraseSuggestion(
-                "new york"
-            )
-
-        if phrase == "new":
-            return FakePhraseSuggestion(
-                "new"
-            )
-
-        return None
+        return self._phrases.get(
+            phrase.lower()
+        )
 
 
 @pytest.fixture
@@ -196,11 +187,7 @@ def test_preserves_entity_lookup(
         if item["corrected_text"] == "new york"
     )
 
-    assert match["entities"] == [
-        {
-            "id": "test_entity",
-        }
-    ]
+    assert match["entities"] == [('new york', (100, 0))]
 
 
 def test_empty_input(
