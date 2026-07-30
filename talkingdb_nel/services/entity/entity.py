@@ -105,6 +105,7 @@ def get_surface_texts(
 
     universal_entities = surface_text_extractor.extract(
         message_text,
+        [],
         word_correction=word_correction,
     )
 
@@ -149,7 +150,7 @@ def get_surface_texts(
         universal_entities + regex_entities,
     )
 
-    lemmatizer = Lemmatizer()
+    lemmatizer = Lemmatizer(store)
 
     remaining_no_tags, lemmatized = lemmatizer.lemmatize(no_tags)
 
@@ -161,9 +162,8 @@ def get_surface_texts(
 
         text = " ".join(chunk["lemmatized_tokens"])
 
-        additional = sentence_symspell.extract(
+        additional = sentence_symspell.get_suggestions(
             text,
-            word_correction=word_correction,
             max_edit_distance=1,
         )
 
@@ -173,15 +173,14 @@ def get_surface_texts(
 
             index = (
                 offset,
-                offset + len(entity["surface_text"]),
+                offset + len(entity[0]),
             )
 
             if index in seen:
                 continue
 
-            entity["index"] = index
-
-            universal_entities.append(entity)
+            universal_entities.append(
+                                      {"index": index, "surface_texts": [entity]})
 
             seen.add(index)
 
