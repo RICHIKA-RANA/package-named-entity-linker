@@ -1,7 +1,7 @@
 from collections.abc import Iterable
 
 from .symspell import SymSpell
-from .sqlite_store import SQLiteStore
+from ...model.lex_sqlite_store import SQLiteStore
 from .tokenizer import Tokenizer
 
 

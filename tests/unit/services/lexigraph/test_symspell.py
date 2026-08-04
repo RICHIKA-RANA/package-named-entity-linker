@@ -1,4 +1,4 @@
-from talkingdb_nel.services.lexigraph.sqlite_store import SQLiteStore
+from talkingdb_nel.model.lex_sqlite_store import SQLiteStore
 from talkingdb_nel.services.lexigraph.symspell import SymSpell
 
 

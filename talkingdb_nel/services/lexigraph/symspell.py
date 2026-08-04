@@ -1,7 +1,7 @@
 from collections import deque
 
 from .distance import damerau_levenshtein
-from .sqlite_store import SQLiteStore
+from ...model.lex_sqlite_store import SQLiteStore
 
 
 class SymSpell:

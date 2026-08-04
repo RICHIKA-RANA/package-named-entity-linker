@@ -1,5 +1,5 @@
 from talkingdb_nel.services.rule.regex_controller import RegexController
-from talkingdb_nel.services.rule.regex_model import RegexModel
+from talkingdb_nel.model.regex_model import RegexModel
 
 
 def build_controller():

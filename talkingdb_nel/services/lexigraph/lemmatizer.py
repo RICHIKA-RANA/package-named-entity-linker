@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 
-from .sqlite_store import SQLiteStore
+from ...model.lex_sqlite_store import SQLiteStore
 
 
 class Lemmatizer:

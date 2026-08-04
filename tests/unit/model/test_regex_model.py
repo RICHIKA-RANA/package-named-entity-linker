@@ -1,6 +1,6 @@
 import sqlite3
 
-from talkingdb_nel.services.rule.regex_model import RegexModel
+from talkingdb_nel.model.regex_model import RegexModel
 
 
 def create_db():
