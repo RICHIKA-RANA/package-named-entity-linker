@@ -5,10 +5,10 @@ from talkingdb_nel.services.entity import entity
 
 @pytest.fixture(autouse=True)
 def reset_mocks(monkeypatch):
-    monkeypatch.setattr(entity.graph_store, "add_entity", lambda **kwargs: None)
-    monkeypatch.setattr(entity.graph_store, "get_entity", lambda entity_id: None)
-    monkeypatch.setattr(entity.graph_store, "update_surface_texts", lambda *args, **kwargs: None)
-    monkeypatch.setattr(entity.graph_store, "add_fact", lambda **kwargs: None)
+    monkeypatch.setattr(entity.entity_model, "add_entity", lambda **kwargs: None)
+    monkeypatch.setattr(entity.entity_model, "get_entity", lambda entity_id: None)
+    monkeypatch.setattr(entity.entity_model, "update_surface_texts", lambda *args, **kwargs: None)
+    monkeypatch.setattr(entity.entity_model, "add_fact", lambda **kwargs: None)
 
     monkeypatch.setattr(entity.lexigraph, "load", lambda *args, **kwargs: None)
     monkeypatch.setattr(entity.sentence_symspell, "create_dictionary_entry", lambda *args, **kwargs: None)
@@ -45,7 +45,7 @@ def test_index_entity(monkeypatch):
     
 def test_add_surface_text_success(monkeypatch):
     monkeypatch.setattr(
-        entity.graph_store,
+        entity.entity_model,
         "get_entity",
         lambda _: {
             "surface_texts": ["Apple"],
@@ -55,7 +55,7 @@ def test_add_surface_text_success(monkeypatch):
     updated = {}
 
     monkeypatch.setattr(
-        entity.graph_store,
+        entity.entity_model,
         "update_surface_texts",
         lambda entity_id, texts: updated.update(
             {
@@ -79,7 +79,7 @@ def test_add_surface_text_success(monkeypatch):
     
 def test_add_surface_text_missing_entity(monkeypatch):
     monkeypatch.setattr(
-        entity.graph_store,
+        entity.entity_model,
         "get_entity",
         lambda _: None,
     )
@@ -96,7 +96,7 @@ def test_add_surface_text_missing_entity(monkeypatch):
 
 def test_add_surface_text_duplicate(monkeypatch):
     monkeypatch.setattr(
-        entity.graph_store,
+        entity.entity_model,
         "get_entity",
         lambda _: {
             "surface_texts": ["Apple"],
@@ -117,7 +117,7 @@ def test_create_fact(monkeypatch):
     called = {}
 
     monkeypatch.setattr(
-        entity.graph_store,
+        entity.entity_model,
         "add_fact",
         lambda **kwargs: called.update(kwargs),
     )

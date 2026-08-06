@@ -47,3 +47,5 @@ logs
 
 # Databases
 dictionary.db*
+entity.db*
+regex.db*

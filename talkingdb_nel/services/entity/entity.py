@@ -1,45 +1,55 @@
 import sqlite3
 
-from talkingdb.clients.sqlite import DICTIONARY_DB, sqlite_conn
+from talkingdb.clients.sqlite import sqlite_conn,DICTIONARY_DB, ENTITY_DB, REGEX_DB
 from talkingdb_nel.model.dictionary_model import DictionaryModel
+from talkingdb_nel.model.entity_model import EntityModel
 from talkingdb_nel.model.regex_model import RegexModel
-from talkingdb_nel.model.sqlite_store import SQLiteGraphStore
-from talkingdb_nel.services.lexigraph.extract_surface_text import SurfaceTextExtractor
+from talkingdb_nel.services.lexigraph.extract_surface_text import (
+    SurfaceTextExtractor,
+)
 from talkingdb_nel.services.lexigraph.lemmatizer import Lemmatizer
 from talkingdb_nel.services.lexigraph.lexigraph import LexiGraph
 from talkingdb_nel.services.lexigraph.notag import NoTag
 from talkingdb_nel.services.rule.regex_controller import RegexController
-from talkingdb_nel.services.sentencegraph.sentence_symspell import SentenceSymSpell
+from talkingdb_nel.services.sentencegraph.sentence_symspell import (
+    SentenceSymSpell,
+)
 
+dictionary_conn = sqlite_conn(DICTIONARY_DB).__enter__()
+entity_conn = sqlite_conn(ENTITY_DB).__enter__()
+regex_conn = sqlite_conn(REGEX_DB).__enter__()
 
-with sqlite_conn(DICTIONARY_DB) as conn:
-    conn.row_factory = sqlite3.Row
+dictionary_conn.row_factory = sqlite3.Row
 
-    DictionaryModel.init_db(conn)
-    RegexModel.init_db(conn)
+DictionaryModel.init_db(dictionary_conn)
+RegexModel.init_db(regex_conn)
+EntityModel.init_db(entity_conn)
 
-    dictionary = DictionaryModel.create(
-        conn=conn,
-        dictionary_id=DictionaryModel.make_id("default"),
-    )
+dictionary = DictionaryModel.create(
+    conn=dictionary_conn,
+    dictionary_id=DictionaryModel.make_id("default"),
+)
 
-    regex_model = RegexModel.load(
-        conn=conn,
-        regex_id=RegexModel.make_id("default"),
-    )
+regex_model = RegexModel.load(
+    conn=regex_conn,
+    regex_id=RegexModel.make_id("default"),
+)
 
-    lexigraph = LexiGraph(dictionary)
-    sentence_symspell = SentenceSymSpell(dictionary)
-    lemmatizer = Lemmatizer(dictionary)
+entity_model = EntityModel.load(
+    conn=entity_conn,
+    entity_id=EntityModel.make_id("default"),
+)
 
-    graph_store = SQLiteGraphStore()
+lexigraph = LexiGraph(dictionary)
+sentence_symspell = SentenceSymSpell(dictionary)
+lemmatizer = Lemmatizer(dictionary)
 
-    regex_controller = RegexController(regex_model)
+regex_controller = RegexController(regex_model)
 
-    surface_text_extractor = SurfaceTextExtractor(
-        lexigraph.symspell,
-        sentence_symspell,
-    )
+surface_text_extractor = SurfaceTextExtractor(
+    lexigraph.symspell,
+    sentence_symspell,
+)
 
 def index_entity(entity: dict):
     # Word dictionary
@@ -51,7 +61,7 @@ def index_entity(entity: dict):
 
 
 def create_entity(entity: dict):
-    graph_store.add_entity(
+    entity_model.add_entity(
         entity_id=entity["_id"],
         label=entity.get("label", entity["_id"]),
         surface_texts=entity.get("surface_texts", []),
@@ -63,7 +73,7 @@ def create_entity(entity: dict):
 
 
 def add_surface_text(entity_id: str, surface_text: str):
-    entity = graph_store.get_entity(entity_id)
+    entity = entity_model.get_entity(entity_id)
 
     if entity is None:
         return {"success": False, "message": "Entity not found"}
@@ -75,7 +85,7 @@ def add_surface_text(entity_id: str, surface_text: str):
 
     texts.append(surface_text)
 
-    graph_store.update_surface_texts(
+    entity_model.update_surface_texts(
         entity_id,
         texts,
     )
@@ -100,7 +110,7 @@ def create_fact(
     target: str,
     **attributes,
 ):
-    graph_store.add_fact(
+    entity_model.add_fact(
         source=source,
         target=target,
         predicate=predicate,
@@ -115,7 +125,7 @@ def create_regex(entity_id: str, regex: str):
         entity_id,
         regex,
     )
-    regex_model.save(conn)
+    regex_model.save(regex_conn)
     return {"success": True}
 
 
