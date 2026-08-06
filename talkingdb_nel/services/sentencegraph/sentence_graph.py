@@ -1,6 +1,6 @@
 from collections.abc import Iterable
 
-from talkingdb_nel.model.lex_sqlite_store import SQLiteStore
+from talkingdb_nel.model.dictionary_model import DictionaryModel
 
 from .sentence_symspell import SentenceSymSpell
 
@@ -11,23 +11,36 @@ class SentenceGraph:
 
     Stores complete surface-text phrases instead of individual words.
 
-    Example
-    -------
-    >>> graph = SentenceGraph("sentences.db")
-    >>> graph.load(entities)
-    >>> graph.get_suggestions("new york cit")
+    Supported formats
+
+    {
+        "surface_texts": [
+            "New York City",
+            "NYC"
+        ]
+    }
+
+    or
+
+    {
+        "surface_texts": [
+            {
+                "surface_text": "New York City"
+            }
+        ]
+    }
     """
 
     def __init__(
         self,
-        sqlite_path=":memory:",
+        dictionary: DictionaryModel,
         *,
         max_edit_distance=2,
     ):
-        self.store = SQLiteStore(sqlite_path)
+        self.dictionary = dictionary
 
         self.symspell = SentenceSymSpell(
-            self.store,
+            self.dictionary,
             max_edit_distance=max_edit_distance,
         )
 
@@ -54,35 +67,13 @@ class SentenceGraph:
         )
 
     def load(self, entities):
-        """
-        Supported formats
-
-        {
-            "surface_text": [
-                "New York City",
-                "NYC"
-            ]
-        }
-
-        or
-
-        {
-            "surface_text": [
-                {
-                    "surface_text": "New York City"
-                }
-            ]
-        }
-        """
-
         count = 0
 
         for entity in entities:
-
-            surface_texts = entity.get("surface_text", [])
-
-            for surface in surface_texts:
-
+            for surface in entity.get(
+                "surface_texts",
+                [],
+            ):
                 if isinstance(surface, dict):
                     surface = surface.get(
                         "surface_text",
@@ -107,7 +98,6 @@ class SentenceGraph:
         count = 0
 
         for sentence in sentences:
-
             self.create_dictionary_entry(
                 sentence.strip().lower()
             )
@@ -117,20 +107,17 @@ class SentenceGraph:
         return count
 
     def contains(self, sentence):
-        return self.store.has_word(
+        return self.dictionary.has_word(
             sentence.strip().lower()
         )
 
     def frequency(self, sentence):
-        return self.store.get_frequency(
+        return self.dictionary.get_frequency(
             sentence.strip().lower()
         )
-
-    def close(self):
-        self.store.close()
 
     def __contains__(self, sentence):
         return self.contains(sentence)
 
     def __len__(self):
-        return self.store.word_count()
+        return self.dictionary.word_count()

@@ -1,25 +1,25 @@
 from collections import deque
 
 from .distance import damerau_levenshtein
-from ...model.lex_sqlite_store import SQLiteStore
+from ...model.dictionary_model import DictionaryModel
 
 
 class SymSpell:
     def __init__(
         self,
-        store: SQLiteStore,
+        dictionary: DictionaryModel,
         max_edit_distance: int = 2,
     ):
-        self.store = store
+        self.dictionary = dictionary
         self.max_edit_distance = max_edit_distance
         self.longest_word_length = (
-            self.store.get_metadata("longest_word_length", 0)
+            self.dictionary.get_metadata("longest_word_length", 0)
         )
 
     def _update_longest_word(self, word):
         if len(word) > self.longest_word_length:
             self.longest_word_length = len(word)
-            self.store.set_metadata(
+            self.dictionary.set_metadata(
                 "longest_word_length",
                 self.longest_word_length,
             )
@@ -54,16 +54,16 @@ class SymSpell:
     def create_dictionary_entry(self, word):
         word = word.lower()
 
-        if self.store.has_word(word):
-            self.store.increment_frequency(word)
+        if self.dictionary.has_word(word):
+            self.dictionary.increment_frequency(word)
             return False
 
-        self.store.insert_word(word)
+        self.dictionary.insert_word(word)
 
         self._update_longest_word(word)
 
         for delete in self.get_deletes_list(word):
-            self.store.add_suggestion(delete, word)
+            self.dictionary.add_suggestion(delete, word)
 
         return True
 
@@ -101,9 +101,9 @@ class SymSpell:
             ):
                 break
 
-            if self.store.has_word(candidate):
+            if self.dictionary.has_word(candidate):
 
-                freq = self.store.get_frequency(candidate)
+                freq = self.dictionary.get_frequency(candidate)
 
                 if freq > 0:
                     suggestions[candidate] = (
@@ -116,7 +116,7 @@ class SymSpell:
                         len(word) - len(candidate),
                     )
 
-                for real_word in self.store.get_suggestions(candidate):
+                for real_word in self.dictionary.get_suggestions(candidate):
 
                     if real_word in suggestions:
                         continue
@@ -129,7 +129,7 @@ class SymSpell:
                     if distance <= max_edit_distance:
 
                         suggestions[real_word] = (
-                            self.store.get_frequency(real_word),
+                            self.dictionary.get_frequency(real_word),
                             distance,
                         )
 

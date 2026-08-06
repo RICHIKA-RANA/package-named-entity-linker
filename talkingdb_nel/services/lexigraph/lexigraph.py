@@ -1,7 +1,7 @@
 from collections.abc import Iterable
 
 from .symspell import SymSpell
-from ...model.lex_sqlite_store import SQLiteStore
+from ...model.dictionary_model import DictionaryModel
 from .tokenizer import Tokenizer
 
 
@@ -20,14 +20,14 @@ class LexiGraph:
 
     def __init__(
         self,
-        sqlite_path=":memory:",
+        dictionary: DictionaryModel,
         *,
         max_edit_distance=2,
     ):
-        self.store = SQLiteStore(sqlite_path)
+        self.dictionary = dictionary
 
         self.symspell = SymSpell(
-            self.store,
+            self.dictionary,
             max_edit_distance=max_edit_distance,
         )
 
@@ -118,16 +118,16 @@ class LexiGraph:
         return count
 
     def contains(self, word):
-        return self.store.has_word(word.lower())
+        return self.dictionary.has_word(word.lower())
 
     def frequency(self, word):
-        return self.store.get_frequency(word.lower())
+        return self.dictionary.get_frequency(word.lower())
 
     def close(self):
-        self.store.close()
+        self.dictionary.close()
 
     def __contains__(self, word):
         return self.contains(word)
 
     def __len__(self):
-        return self.store.word_count()
+        return self.dictionary.word_count()

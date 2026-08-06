@@ -1,39 +1,47 @@
-from talkingdb_nel.model.lex_sqlite_store import SQLiteStore
+import sqlite3
+
+from talkingdb_nel.model.dictionary_model import DictionaryModel
 from talkingdb_nel.services.sentencegraph.sentence_symspell import (
     SentenceSymSpell,
 )
 
 
 def build_spell():
-    store = SQLiteStore(":memory:")
-    return SentenceSymSpell(store)
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+
+    DictionaryModel.init_db(conn)
+
+    dictionary = DictionaryModel.create(
+        conn=conn,
+        dictionary_id=DictionaryModel.make_id("test"),
+    )
+
+    return conn, SentenceSymSpell(dictionary)
 
 
 def test_create_dictionary_entry():
-    spell = build_spell()
+    conn, spell = build_spell()
 
-    assert spell.create_dictionary_entry(
-        "New York City"
-    )
+    assert spell.create_dictionary_entry("New York City")
+
+    conn.commit()
 
 
 def test_duplicate_entry():
-    spell = build_spell()
+    conn, spell = build_spell()
 
-    spell.create_dictionary_entry(
-        "New York City"
-    )
+    spell.create_dictionary_entry("New York City")
+    conn.commit()
 
     assert (
-        spell.create_dictionary_entry(
-            "New York City"
-        )
+        spell.create_dictionary_entry("New York City")
         is False
     )
 
 
 def test_get_deletes():
-    spell = build_spell()
+    _, spell = build_spell()
 
     deletes = spell.get_deletes_list("hello")
 
@@ -42,35 +50,28 @@ def test_get_deletes():
 
 
 def test_suggestions():
-    spell = build_spell()
+    conn, spell = build_spell()
 
-    spell.create_dictionary_entry(
-        "New York City"
-    )
+    spell.create_dictionary_entry("New York City")
+    conn.commit()
 
-    suggestions = spell.get_suggestions(
-        "new york cit"
-    )
+    suggestions = spell.get_suggestions("new york cit")
 
     assert suggestions
-
     assert suggestions[0][0] == "new york city"
 
 
 def test_no_match():
-    spell = build_spell()
+    conn, spell = build_spell()
 
-    spell.create_dictionary_entry(
-        "New York City"
-    )
+    spell.create_dictionary_entry("New York City")
+    conn.commit()
 
-    assert spell.get_suggestions(
-        "abcdef"
-    ) == []
+    assert spell.get_suggestions("abcdef") == []
 
 
 def test_longest_word():
-    spell = build_spell()
+    _, spell = build_spell()
 
     spell.create_dictionary_entry(
         "International Business Machines"

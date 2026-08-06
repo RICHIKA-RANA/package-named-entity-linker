@@ -1,29 +1,48 @@
+import sqlite3
+
+from talkingdb_nel.model.dictionary_model import DictionaryModel
 from talkingdb_nel.services.sentencegraph import SentenceGraph
 
 
+def build_graph():
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+
+    DictionaryModel.init_db(conn)
+
+    dictionary = DictionaryModel.create(
+        conn=conn,
+        dictionary_id=DictionaryModel.make_id("test"),
+    )
+
+    return conn, SentenceGraph(dictionary)
+
+
 def test_create_dictionary_entry():
-    graph = SentenceGraph(":memory:")
+    conn, graph = build_graph()
 
     assert graph.create_dictionary_entry("New York City")
+    conn.commit()
 
     assert "new york city" in graph
 
 
 def test_duplicate_entry():
-    graph = SentenceGraph(":memory:")
+    conn, graph = build_graph()
 
     graph.create_dictionary_entry("New York City")
     graph.create_dictionary_entry("New York City")
+    conn.commit()
 
     assert graph.frequency("new york city") == 2
 
 
 def test_load():
-    graph = SentenceGraph(":memory:")
+    conn, graph = build_graph()
 
     entities = [
         {
-            "surface_text": [
+            "surface_texts": [
                 "New York City",
                 "NYC",
             ]
@@ -31,19 +50,19 @@ def test_load():
     ]
 
     count = graph.load(entities)
+    conn.commit()
 
     assert count == 2
-
     assert "new york city" in graph
     assert "nyc" in graph
 
 
 def test_load_dict_surface_text():
-    graph = SentenceGraph(":memory:")
+    conn, graph = build_graph()
 
     entities = [
         {
-            "surface_text": [
+            "surface_texts": [
                 {"surface_text": "Los Angeles"},
                 {"surface_text": "LA"},
             ]
@@ -51,13 +70,14 @@ def test_load_dict_surface_text():
     ]
 
     graph.load(entities)
+    conn.commit()
 
     assert "los angeles" in graph
     assert "la" in graph
 
 
 def test_load_sentences():
-    graph = SentenceGraph(":memory:")
+    conn, graph = build_graph()
 
     graph.load_sentences(
         [
@@ -65,54 +85,56 @@ def test_load_sentences():
             "Microsoft",
         ]
     )
+    conn.commit()
 
     assert "apple inc" in graph
     assert "microsoft" in graph
 
 
 def test_contains():
-    graph = SentenceGraph(":memory:")
+    conn, graph = build_graph()
 
     graph.create_dictionary_entry("OpenAI")
+    conn.commit()
 
     assert "openai" in graph
-    assert "Google" not in graph
+    assert "google" not in graph
 
 
 def test_frequency():
-    graph = SentenceGraph(":memory:")
+    conn, graph = build_graph()
 
     graph.create_dictionary_entry("OpenAI")
     graph.create_dictionary_entry("OpenAI")
+    conn.commit()
 
     assert graph.frequency("openai") == 2
 
 
 def test_get_suggestions():
-    graph = SentenceGraph(":memory:")
+    conn, graph = build_graph()
 
     graph.create_dictionary_entry("New York City")
+    conn.commit()
 
-    suggestions = graph.get_suggestions(
-        "new york cit"
-    )
+    suggestions = graph.get_suggestions("new york cit")
 
     assert suggestions
-
     assert suggestions[0][0] == "new york city"
 
 
 def test_len():
-    graph = SentenceGraph(":memory:")
+    conn, graph = build_graph()
 
     graph.create_dictionary_entry("Apple")
     graph.create_dictionary_entry("Microsoft")
+    conn.commit()
 
     assert len(graph) == 2
 
 
 def test_longest_word_length():
-    graph = SentenceGraph(":memory:")
+    _, graph = build_graph()
 
     graph.create_dictionary_entry(
         "International Business Machines"
@@ -125,6 +147,6 @@ def test_longest_word_length():
 
 
 def test_close():
-    graph = SentenceGraph(":memory:")
+    conn, _ = build_graph()
 
-    graph.close()
+    conn.close()

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 
-from ...model.lex_sqlite_store import SQLiteStore
+from ...model.dictionary_model import DictionaryModel
 
 
 class Lemmatizer:
@@ -30,8 +30,8 @@ class Lemmatizer:
         )
     """
 
-    def __init__(self, store: SQLiteStore):
-        self.store = store
+    def __init__(self, dictionary: DictionaryModel):
+        self.dictionary = dictionary
         self.ans = []
         self.remaining_no_tags = []
 
@@ -51,7 +51,7 @@ class Lemmatizer:
             for split in range(3, len(word) + 1):
                 prefix = word[:split]
 
-                if self.store.has_word(prefix):
+                if self.dictionary.has_word(prefix):
                     current = [prefix]
                     if self._break_into_unbound_morphemes(
                         word[split:],
@@ -83,7 +83,7 @@ class Lemmatizer:
         for split in range(3, len(word) + 1):
             prefix = word[:split]
 
-            if self.store.has_word(prefix):
+            if self.dictionary.has_word(prefix):
                 current.append(prefix)
 
                 if self._break_into_unbound_morphemes(
