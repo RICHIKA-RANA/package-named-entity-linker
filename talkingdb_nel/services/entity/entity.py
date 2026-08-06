@@ -16,10 +16,16 @@ with sqlite_conn(DICTIONARY_DB) as conn:
     conn.row_factory = sqlite3.Row
 
     DictionaryModel.init_db(conn)
+    RegexModel.init_db(conn)
 
     dictionary = DictionaryModel.create(
         conn=conn,
-        dictionary_id=DictionaryModel.make_id("english"),
+        dictionary_id=DictionaryModel.make_id("default"),
+    )
+
+    regex_model = RegexModel.load(
+        conn=conn,
+        regex_id=RegexModel.make_id("default"),
     )
 
     lexigraph = LexiGraph(dictionary)
@@ -28,14 +34,12 @@ with sqlite_conn(DICTIONARY_DB) as conn:
 
     graph_store = SQLiteGraphStore()
 
-    regex_model = RegexModel()
     regex_controller = RegexController(regex_model)
 
     surface_text_extractor = SurfaceTextExtractor(
         lexigraph.symspell,
         sentence_symspell,
     )
-
 
 def index_entity(entity: dict):
     # Word dictionary
@@ -111,7 +115,7 @@ def create_regex(entity_id: str, regex: str):
         entity_id,
         regex,
     )
-
+    regex_model.save(conn)
     return {"success": True}
 
 

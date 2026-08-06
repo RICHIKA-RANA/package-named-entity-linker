@@ -3,8 +3,7 @@ from __future__ import annotations
 import re
 import sqlite3
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
-from typing import Dict
+from typing import Dict, Type
 
 from smart_slugify import slugify
 
@@ -15,52 +14,54 @@ class RegexRule:
     compiled: re.Pattern = field(init=False, repr=False)
 
     def __post_init__(self):
-        self.compiled = re.compile(self.pattern, re.IGNORECASE)
+        self.compiled = re.compile(
+            self.pattern,
+            re.IGNORECASE,
+        )
 
 
+@dataclass
 class RegexModel:
-    def __init__(self):
-        self.rules: Dict[str, list[RegexRule]] = {}
+    regex_id: str
+    rules: Dict[str, list[RegexRule]] = field(
+        default_factory=dict,
+    )
 
     @staticmethod
     def make_id(name: str) -> str:
         return f"regex::{slugify(name)}"
 
-    @staticmethod
-    def init_db(conn: sqlite3.Connection) -> None:
-        conn.executescript(
-            """
-            PRAGMA journal_mode=WAL;
-            PRAGMA synchronous=NORMAL;
-
-            CREATE TABLE IF NOT EXISTS regex_rules (
-                rule_id TEXT NOT NULL,
-                pattern TEXT NOT NULL,
-                created_at TEXT,
-                PRIMARY KEY(rule_id, pattern)
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_regex_rules_rule_id
-            ON regex_rules(rule_id);
-            """
-        )
+    @classmethod
+    def create(
+        cls: Type["RegexModel"],
+        regex_id: str,
+    ) -> "RegexModel":
+        return cls(regex_id=regex_id)
 
     @classmethod
-    def load(cls, conn: sqlite3.Connection) -> "RegexModel":
-        model = cls()
+    def load(
+        cls: Type["RegexModel"],
+        conn: sqlite3.Connection,
+        regex_id: str,
+    ) -> "RegexModel":
+        model = cls(regex_id=regex_id)
 
         cursor = conn.execute(
             """
-            SELECT rule_id, pattern
+            SELECT rule_name, pattern
             FROM regex_rules
-            """
+            WHERE regex_id = ?
+            """,
+            (regex_id,),
         )
 
-        for rule_id, pattern in cursor:
+        for rule_name, pattern in cursor:
             try:
-                model.add_rule(rule_id, pattern)
+                model.add_rule(
+                    rule_name,
+                    pattern,
+                )
             except re.error:
-                # Ignore invalid regex stored in DB
                 continue
 
         return model
@@ -73,42 +74,92 @@ class RegexModel:
         cursor = conn.cursor()
 
         if overwrite:
-            cursor.execute("DELETE FROM regex_rules")
+            cursor.execute(
+                """
+                DELETE
+                FROM regex_rules
+                WHERE regex_id = ?
+                """,
+                (self.regex_id,),
+            )
 
-        now = datetime.now(UTC).isoformat()
+        rows = [
+            (
+                self.regex_id,
+                rule_name,
+                rule.pattern,
+            )
+            for rule_name, rules in self.rules.items()
+            for rule in rules
+        ]
 
-        for rule_id, rules in self.rules.items():
+        if rows:
             cursor.executemany(
                 """
-                INSERT OR REPLACE
-                INTO regex_rules(rule_id, pattern, created_at)
+                INSERT INTO regex_rules(
+                    regex_id,
+                    rule_name,
+                    pattern
+                )
                 VALUES (?, ?, ?)
                 """,
-                [
-                    (rule_id, rule.pattern, now)
-                    for rule in rules
-                ],
+                rows,
             )
 
         conn.commit()
 
+    @staticmethod
+    def init_db(
+        conn: sqlite3.Connection,
+    ) -> None:
+        conn.executescript("""
+        PRAGMA journal_mode = WAL;
+        PRAGMA synchronous = NORMAL;
+
+        CREATE TABLE IF NOT EXISTS regex_rules (
+            regex_id TEXT NOT NULL,
+            rule_name TEXT NOT NULL,
+            pattern TEXT NOT NULL,
+            PRIMARY KEY (
+                regex_id,
+                rule_name,
+                pattern
+            )
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_regex_rules
+        ON regex_rules(regex_id, rule_name);
+        """)
+
     def add_rule(
         self,
-        rule_id: str,
+        rule_name: str,
         pattern: str,
     ) -> None:
-        rule = RegexRule(pattern)
+        self.rules.setdefault(
+            rule_name,
+            [],
+        ).append(
+            RegexRule(pattern)
+        )
 
-        self.rules.setdefault(rule_id, []).append(rule)
-
-    def remove_rule(self, rule_id: str) -> None:
-        self.rules.pop(rule_id, None)
+    def remove_rule(
+        self,
+        rule_name: str,
+    ) -> None:
+        self.rules.pop(
+            rule_name,
+            None,
+        )
 
     def clear(self) -> None:
         self.rules.clear()
 
     def to_dict(self):
         return {
-            rule_id: [r.pattern for r in rules]
-            for rule_id, rules in self.rules.items()
+            rule_name: [
+                rule.pattern
+                for rule in rules
+            ]
+            for rule_name, rules in self.rules.items()
         }

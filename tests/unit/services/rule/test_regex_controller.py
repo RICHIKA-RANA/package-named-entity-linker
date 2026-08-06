@@ -1,9 +1,11 @@
-from talkingdb_nel.services.rule.regex_controller import RegexController
 from talkingdb_nel.model.regex_model import RegexModel
+from talkingdb_nel.services.rule.regex_controller import RegexController
 
 
 def build_controller():
-    model = RegexModel()
+    model = RegexModel.create(
+        RegexModel.make_id("test"),
+    )
 
     model.add_rule("phone", r"\d{10}")
     model.add_rule("email", r"\S+@\S+")
@@ -25,7 +27,6 @@ def test_phone():
     )
 
     assert len(results) == 1
-
     assert results[0]["surfaceText"] == "9876543210"
     assert results[0]["rule"] == "phone"
 
@@ -38,7 +39,6 @@ def test_email():
     )
 
     assert len(results) == 1
-
     assert results[0]["surfaceText"] == "john@test.com"
     assert results[0]["rule"] == "email"
 
@@ -54,7 +54,10 @@ def test_multiple_matches():
 
 
 def test_case_insensitive():
-    model = RegexModel()
+    model = RegexModel.create(
+        RegexModel.make_id("test"),
+    )
+
     model.add_rule("hello", "hello")
 
     controller = RegexController(model)
@@ -66,7 +69,9 @@ def test_case_insensitive():
 
 
 def test_multiple_rules():
-    model = RegexModel()
+    model = RegexModel.create(
+        RegexModel.make_id("test"),
+    )
 
     model.add_rule("number", r"\d+")
     model.add_rule("word", r"abc")
@@ -77,6 +82,6 @@ def test_multiple_rules():
 
     assert len(results) == 2
 
-    rules = {r["rule"] for r in results}
+    rules = {result["rule"] for result in results}
 
     assert rules == {"number", "word"}

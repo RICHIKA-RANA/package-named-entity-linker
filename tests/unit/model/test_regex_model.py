@@ -9,12 +9,21 @@ def create_db():
     return conn
 
 
+def create_model():
+    return RegexModel.create(
+        RegexModel.make_id("test"),
+    )
+
+
 def test_make_id():
-    assert RegexModel.make_id("Phone Number") == "regex::phone-number"
+    assert (
+        RegexModel.make_id("Phone Number")
+        == "regex::phone-number"
+    )
 
 
 def test_add_rule():
-    model = RegexModel()
+    model = create_model()
 
     model.add_rule("phone", r"\d+")
 
@@ -24,7 +33,7 @@ def test_add_rule():
 
 
 def test_remove_rule():
-    model = RegexModel()
+    model = create_model()
 
     model.add_rule("phone", r"\d+")
     model.remove_rule("phone")
@@ -33,7 +42,7 @@ def test_remove_rule():
 
 
 def test_clear():
-    model = RegexModel()
+    model = create_model()
 
     model.add_rule("phone", r"\d+")
     model.add_rule("email", r".*@.*")
@@ -46,13 +55,16 @@ def test_clear():
 def test_save_and_load():
     conn = create_db()
 
-    model = RegexModel()
+    model = create_model()
     model.add_rule("phone", r"\d+")
     model.add_rule("email", r"\S+@\S+")
 
     model.save(conn)
 
-    loaded = RegexModel.load(conn)
+    loaded = RegexModel.load(
+        conn,
+        RegexModel.make_id("test"),
+    )
 
     assert "phone" in loaded.rules
     assert "email" in loaded.rules
@@ -64,7 +76,7 @@ def test_save_and_load():
 def test_overwrite():
     conn = create_db()
 
-    model = RegexModel()
+    model = create_model()
     model.add_rule("phone", r"\d+")
     model.save(conn)
 
@@ -72,14 +84,17 @@ def test_overwrite():
     model.add_rule("email", r"\S+@\S+")
     model.save(conn)
 
-    loaded = RegexModel.load(conn)
+    loaded = RegexModel.load(
+        conn,
+        RegexModel.make_id("test"),
+    )
 
     assert "phone" not in loaded.rules
     assert "email" in loaded.rules
 
 
 def test_to_dict():
-    model = RegexModel()
+    model = create_model()
 
     model.add_rule("phone", r"\d+")
 
@@ -89,7 +104,7 @@ def test_to_dict():
 
 
 def test_invalid_regex_rejected():
-    model = RegexModel()
+    model = create_model()
 
     try:
         model.add_rule("bad", "(")
