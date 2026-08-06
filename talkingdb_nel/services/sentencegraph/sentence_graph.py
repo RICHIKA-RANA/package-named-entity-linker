@@ -1,6 +1,6 @@
 from collections.abc import Iterable
 
-from talkingdb_nel.model.dictionary_model import DictionaryModel
+from talkingdb.models.dictionary.dictionary import DictionaryModel
 
 from .sentence_symspell import SentenceSymSpell
 

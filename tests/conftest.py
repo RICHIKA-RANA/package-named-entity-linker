@@ -2,7 +2,7 @@ import sqlite3
 
 import pytest
 
-from talkingdb_nel.model.dictionary_model import DictionaryModel
+from talkingdb.models.dictionary.dictionary import DictionaryModel
 from talkingdb_nel.services.lexigraph import LexiGraph
 
 

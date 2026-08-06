@@ -1,7 +1,7 @@
 from collections.abc import Iterable
 
 from .symspell import SymSpell
-from ...model.dictionary_model import DictionaryModel
+from  talkingdb.models.dictionary.dictionary import DictionaryModel
 from .tokenizer import Tokenizer
 
 

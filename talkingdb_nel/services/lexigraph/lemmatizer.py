@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 
-from ...model.dictionary_model import DictionaryModel
+from talkingdb.models.dictionary.dictionary import DictionaryModel
 
 
 class Lemmatizer:

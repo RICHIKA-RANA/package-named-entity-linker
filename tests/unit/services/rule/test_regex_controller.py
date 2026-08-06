@@ -1,4 +1,4 @@
-from talkingdb_nel.model.regex_model import RegexModel
+from talkingdb.models.rule.regex import RegexModel
 from talkingdb_nel.services.rule.regex_controller import RegexController
 
 

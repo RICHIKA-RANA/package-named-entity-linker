@@ -1,7 +1,7 @@
 from collections import deque
 
 from .distance import damerau_levenshtein
-from ...model.dictionary_model import DictionaryModel
+from talkingdb.models.dictionary.dictionary import DictionaryModel
 
 
 class SymSpell:

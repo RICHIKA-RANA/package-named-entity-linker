@@ -1,9 +1,9 @@
 import sqlite3
 
 from talkingdb.clients.sqlite import sqlite_conn,DICTIONARY_DB, ENTITY_DB, REGEX_DB
-from talkingdb_nel.model.dictionary_model import DictionaryModel
-from talkingdb_nel.model.entity_model import EntityModel
-from talkingdb_nel.model.regex_model import RegexModel
+from talkingdb.models.dictionary.dictionary import DictionaryModel
+from talkingdb.models.entity.entity import EntityModel
+from talkingdb.models.rule.regex import RegexModel
 from talkingdb_nel.services.lexigraph.extract_surface_text import (
     SurfaceTextExtractor,
 )
