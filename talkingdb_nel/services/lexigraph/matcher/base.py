@@ -7,7 +7,7 @@ from ..distance import damerau_levenshtein
 
 class BaseMatcher:
     """
-    Base SymSpell matcher operating on arbitrary strings.
+    Base matcher operating on arbitrary strings.
     """
 
     def __init__(

@@ -51,8 +51,6 @@ class FakePhraseMatcher:
         if phrase not in self._phrases:
             return []
 
-        # Match SentenceSymSpell API:
-        # (surface_text, (frequency, edit_distance))
         return [
             (
                 phrase,

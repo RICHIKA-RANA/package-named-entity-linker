@@ -129,7 +129,7 @@ def get_surface_texts(
     word_correction: bool = False,
 ):
     # ------------------------------------------------------------------
-    # Universal entities (SentenceSymSpell + LexiGraph)
+    # Universal entities
     # ------------------------------------------------------------------
 
     universal_entities = surface_text_extractor.extract(

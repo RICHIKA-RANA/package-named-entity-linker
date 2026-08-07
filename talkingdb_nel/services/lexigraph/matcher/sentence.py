@@ -7,7 +7,7 @@ from .base import BaseMatcher
 
 class SentenceMatcher(BaseMatcher):
     """
-    SymSpell matcher operating on complete surface-text phrases.
+    Matcher operating on complete surface-text phrases.
     """
 
     def __init__(

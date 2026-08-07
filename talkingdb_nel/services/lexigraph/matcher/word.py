@@ -9,7 +9,7 @@ from .base import BaseMatcher
 
 class WordMatcher(BaseMatcher):
     """
-    SymSpell matcher operating on individual words.
+    Matcher operating on individual words.
 
     Surface text is tokenized before being added to the
     dictionary.
