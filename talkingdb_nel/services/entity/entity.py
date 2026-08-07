@@ -1,52 +1,14 @@
-import sqlite3
-
-from talkingdb.clients.sqlite import sqlite_conn, DICTIONARY_DB, ENTITY_DB, REGEX_DB
-from talkingdb.models.dictionary.dictionary import DictionaryModel
-from talkingdb.models.entity.entity import EntityModel
-from talkingdb.models.rule.regex import RegexModel
-from talkingdb_nel.services.symbolic.extractor import SurfaceTextExtractor
-from talkingdb_nel.services.symbolic.lemmatizer import Lemmatizer
-from talkingdb_nel.services.symbolic.notag import NoTag
-from talkingdb_nel.services.symbolic.regex import RegexController
-from talkingdb_nel.services.symbolic.matcher.phrase import PhraseMatcher
-from talkingdb_nel.services.symbolic.matcher.word import WordMatcher
-
-dictionary_conn = sqlite_conn(DICTIONARY_DB).__enter__()
-entity_conn = sqlite_conn(ENTITY_DB).__enter__()
-regex_conn = sqlite_conn(REGEX_DB).__enter__()
-
-dictionary_conn.row_factory = sqlite3.Row
-
-DictionaryModel.init_db(dictionary_conn)
-RegexModel.init_db(regex_conn)
-EntityModel.init_db(entity_conn)
-
-dictionary = DictionaryModel.create(
-    conn=dictionary_conn,
-    dictionary_id=DictionaryModel.make_id("default"),
-)
-
-regex_model = RegexModel.load(
-    conn=regex_conn,
-    regex_id=RegexModel.make_id("default"),
-)
-
-entity_model = EntityModel.load(
-    conn=entity_conn,
-    entity_id=EntityModel.make_id("default"),
-)
-
-word_matcher = WordMatcher(dictionary)
-sentence_matcher = PhraseMatcher(dictionary)
-
-lemmatizer = Lemmatizer(dictionary)
-
-regex_controller = RegexController(regex_model)
-
-surface_text_extractor = SurfaceTextExtractor(
+from talkingdb_nel.services.entity.base import (
+    entity_model,
+    regex_model,
+    regex_conn,
     word_matcher,
     sentence_matcher,
+    lemmatizer,
+    regex_controller,
+    surface_text_extractor,
 )
+from talkingdb_nel.services.symbolic.notag import NoTag
 
 
 def index_entity(entity: dict):
@@ -84,14 +46,13 @@ def add_surface_text(entity_id: str, surface_text: str):
         texts,
     )
 
-    entity = {
-        "_id": entity_id,
-        "surface_text": [surface_text],
-        "surface_texts": [surface_text],
-    }
-
-    word_matcher.load([entity])
-    sentence_matcher.load([entity])
+    index_entity(
+        {
+            "_id": entity_id,
+            "surface_text": [surface_text],
+            "surface_texts": [surface_text],
+        }
+    )
 
     return {"success": True}
 
@@ -118,6 +79,7 @@ def create_regex(entity_id: str, regex: str):
         regex,
     )
     regex_model.save(regex_conn)
+
     return {"success": True}
 
 
@@ -125,10 +87,6 @@ def get_surface_texts(
     message_text: str,
     word_correction: bool = False,
 ):
-    # ------------------------------------------------------------------
-    # Universal entities
-    # ------------------------------------------------------------------
-
     universal_entities = surface_text_extractor.extract(
         message_text,
         [],
@@ -140,10 +98,6 @@ def get_surface_texts(
         for entity in universal_entities
         if entity["entities"]
     ]
-
-    # ------------------------------------------------------------------
-    # Regex entities
-    # ------------------------------------------------------------------
 
     regex_entities = regex_controller.process(message_text)
 
@@ -165,10 +119,6 @@ def get_surface_texts(
 
         if not set(range(start, end)).intersection(date_locations):
             filtered_regex.append(entity)
-
-    # ------------------------------------------------------------------
-    # Untagged text
-    # ------------------------------------------------------------------
 
     no_tags = NoTag.get_no_tags(
         message_text,
