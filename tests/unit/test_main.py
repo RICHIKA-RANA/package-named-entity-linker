@@ -7,7 +7,7 @@ client = TestClient(app)
 
 
 def test_app_title():
-    assert app.title == "Named Entity Linker"
+    assert app.title == "TalkingDB Named Entity Linker"
 
 
 def test_cors_middleware_registered():
