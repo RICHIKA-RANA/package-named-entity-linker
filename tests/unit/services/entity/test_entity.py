@@ -10,27 +10,26 @@ def reset_mocks(monkeypatch):
     monkeypatch.setattr(entity.entity_model, "update_surface_texts", lambda *args, **kwargs: None)
     monkeypatch.setattr(entity.entity_model, "add_fact", lambda **kwargs: None)
 
-    monkeypatch.setattr(entity.lexigraph, "load", lambda *args, **kwargs: None)
-    monkeypatch.setattr(entity.sentence_symspell, "create_dictionary_entry", lambda *args, **kwargs: None)
+    monkeypatch.setattr(entity.word_matcher, "load",  lambda *args, **kwargs: None,)
+    monkeypatch.setattr(entity.sentence_matcher, "load", lambda *args, **kwargs: None,)
 
     monkeypatch.setattr(entity.regex_controller, "process", lambda text: [])
-
     monkeypatch.setattr(entity.surface_text_extractor, "extract", lambda *args, **kwargs: [])
     
 def test_index_entity(monkeypatch):
-    loaded = []
-    indexed = []
+    word_loaded = []
+    sentence_loaded = []
 
     monkeypatch.setattr(
-        entity.lexigraph,
+        entity.word_matcher,
         "load",
-        lambda docs: loaded.extend(docs),
+        lambda docs: word_loaded.extend(docs),
     )
 
     monkeypatch.setattr(
-        entity.sentence_symspell,
-        "create_dictionary_entry",
-        lambda text: indexed.append(text),
+        entity.sentence_matcher,
+        "load",
+        lambda docs: sentence_loaded.extend(docs),
     )
 
     e = {
@@ -40,8 +39,8 @@ def test_index_entity(monkeypatch):
 
     entity.index_entity(e)
 
-    assert loaded == [e]
-    assert indexed == ["Apple", "Apple Inc"]
+    assert word_loaded == [e]
+    assert sentence_loaded == [e]
     
 def test_add_surface_text_success(monkeypatch):
     monkeypatch.setattr(

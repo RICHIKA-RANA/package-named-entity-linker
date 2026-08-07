@@ -3,11 +3,11 @@ import sqlite3
 import pytest
 
 from talkingdb.models.dictionary.dictionary import DictionaryModel
-from talkingdb_nel.services.lexigraph import LexiGraph
+from talkingdb_nel.services.lexigraph.matcher.sentence import SentenceMatcher
+from talkingdb_nel.services.lexigraph.matcher.word import WordMatcher
 
 
-@pytest.fixture
-def lexigraph():
+def create_dictionary():
     conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row
 
@@ -18,11 +18,32 @@ def lexigraph():
         dictionary_id=DictionaryModel.make_id("test"),
     )
 
-    lexi = LexiGraph(
+    return conn, dictionary
+
+
+@pytest.fixture
+def word_matcher():
+    conn, dictionary = create_dictionary()
+
+    matcher = WordMatcher(
         dictionary=dictionary,
         max_edit_distance=2,
     )
 
-    yield lexi
+    yield matcher
+
+    conn.close()
+
+
+@pytest.fixture
+def sentence_matcher():
+    conn, dictionary = create_dictionary()
+
+    matcher = SentenceMatcher(
+        dictionary=dictionary,
+        max_edit_distance=2,
+    )
+
+    yield matcher
 
     conn.close()

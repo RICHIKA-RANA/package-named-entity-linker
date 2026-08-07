@@ -1,6 +1,6 @@
 import sqlite3
 
-from talkingdb.clients.sqlite import sqlite_conn,DICTIONARY_DB, ENTITY_DB, REGEX_DB
+from talkingdb.clients.sqlite import sqlite_conn, DICTIONARY_DB, ENTITY_DB, REGEX_DB
 from talkingdb.models.dictionary.dictionary import DictionaryModel
 from talkingdb.models.entity.entity import EntityModel
 from talkingdb.models.rule.regex import RegexModel
@@ -8,12 +8,11 @@ from talkingdb_nel.services.lexigraph.extractor import (
     SurfaceTextExtractor,
 )
 from talkingdb_nel.services.lexigraph.lemmatizer import Lemmatizer
-from talkingdb_nel.services.lexigraph.lexigraph import LexiGraph
 from talkingdb_nel.services.lexigraph.notag import NoTag
 from talkingdb_nel.services.rule.regex_controller import RegexController
-from talkingdb_nel.services.lexigraph.sentence_symspell import (
-    SentenceSymSpell,
-)
+
+from talkingdb_nel.services.lexigraph.matcher.sentence import SentenceMatcher
+from talkingdb_nel.services.lexigraph.matcher.word import WordMatcher
 
 dictionary_conn = sqlite_conn(DICTIONARY_DB).__enter__()
 entity_conn = sqlite_conn(ENTITY_DB).__enter__()
@@ -40,24 +39,22 @@ entity_model = EntityModel.load(
     entity_id=EntityModel.make_id("default"),
 )
 
-lexigraph = LexiGraph(dictionary)
-sentence_symspell = SentenceSymSpell(dictionary)
+word_matcher = WordMatcher(dictionary)
+sentence_matcher = SentenceMatcher(dictionary)
+
 lemmatizer = Lemmatizer(dictionary)
 
 regex_controller = RegexController(regex_model)
 
 surface_text_extractor = SurfaceTextExtractor(
-    lexigraph.symspell,
-    sentence_symspell,
+    word_matcher,
+    sentence_matcher,
 )
 
-def index_entity(entity: dict):
-    # Word dictionary
-    lexigraph.load([entity])
 
-    # Sentence dictionary
-    for surface_text in entity.get("surface_texts", []):
-        sentence_symspell.create_dictionary_entry(surface_text)
+def index_entity(entity: dict):
+    word_matcher.load([entity])
+    sentence_matcher.load([entity])
 
 
 def create_entity(entity: dict):
@@ -90,16 +87,14 @@ def add_surface_text(entity_id: str, surface_text: str):
         texts,
     )
 
-    sentence_symspell.create_dictionary_entry(surface_text)
+    entity = {
+        "_id": entity_id,
+        "surface_text": [surface_text],
+        "surface_texts": [surface_text],
+    }
 
-    lexigraph.load(
-        [
-            {
-                "_id": entity_id,
-                "surface_texts": [surface_text],
-            }
-        ]
-    )
+    word_matcher.load([entity])
+    sentence_matcher.load([entity])
 
     return {"success": True}
 
@@ -191,7 +186,7 @@ def get_surface_texts(
         start = chunk["index"][0]
         text = " ".join(chunk["lemmatized_tokens"])
 
-        additional = sentence_symspell.get_suggestions(
+        additional = sentence_matcher.get_suggestions(
             text,
             max_edit_distance=1,
         )

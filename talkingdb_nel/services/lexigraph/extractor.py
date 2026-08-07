@@ -40,9 +40,9 @@ class ActiveMatch:
 
 
 class SurfaceTextExtractor:
-    def __init__(self, word_spell, phrase_spell):
-        self.word_spell = word_spell
-        self.phrase_spell = phrase_spell
+    def __init__(self, word_matcher, phrase_matcher):
+        self.word_matcher = word_matcher
+        self.phrase_matcher = phrase_matcher
 
     @staticmethod
     def _penalize(distance: int) -> float:
@@ -193,7 +193,7 @@ class SurfaceTextExtractor:
             word = token.text
 
             if word not in cache:
-                suggestions = self.word_spell.get_suggestions(
+                suggestions = self.word_matcher.get_suggestions(
                     word,
                     max_edit_distance=lookup_distance,
                     least_word_suggestions=least_each_word_suggestions,
@@ -263,7 +263,7 @@ class SurfaceTextExtractor:
 
             if key not in cache:
 
-                suggestions = self.phrase_spell.get_suggestions(
+                suggestions = self.phrase_matcher.get_suggestions(
                     key,
                     max_edit_distance=0,
                 )
@@ -700,7 +700,7 @@ class SurfaceTextExtractor:
 
             entities = []
 
-            suggestions = self.phrase_spell.get_suggestions(match.phrase)
+            suggestions = self.phrase_matcher.get_suggestions(match.phrase)
             if suggestions is not None:
                 entities = suggestions
 

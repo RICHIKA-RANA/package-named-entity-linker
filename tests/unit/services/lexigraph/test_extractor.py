@@ -5,7 +5,7 @@ from talkingdb_nel.services.lexigraph.extractor import (
 )
 
 
-class FakeWordSpell:
+class FakeWordMatcher:
     def get_suggestions(
         self,
         word,
@@ -30,7 +30,7 @@ class FakePhraseSuggestion:
         ]
 
 
-class FakePhraseSpell:
+class FakePhraseMatcher:
     def __init__(self):
         self._phrases = {
             "new": FakePhraseSuggestion("new"),
@@ -76,8 +76,8 @@ class FakePhraseSpell:
 def extractor():
 
     return SurfaceTextExtractor(
-        word_spell=FakeWordSpell(),
-        phrase_spell=FakePhraseSpell(),
+        word_matcher=FakeWordMatcher(),
+        phrase_matcher=FakePhraseMatcher(),
     )
 
 
