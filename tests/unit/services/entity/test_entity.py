@@ -18,7 +18,7 @@ def reset_mocks(monkeypatch):
         lambda *args, **kwargs: None,
     )
     monkeypatch.setattr(
-        entity.sentence_matcher,
+        entity.phrase_matcher,
         "load",
         lambda *args, **kwargs: None,
     )
@@ -31,7 +31,7 @@ def reset_mocks(monkeypatch):
 
 def test_index_entity(monkeypatch):
     word_loaded = []
-    sentence_loaded = []
+    phrase_loaded = []
 
     monkeypatch.setattr(
         entity.word_matcher,
@@ -40,9 +40,9 @@ def test_index_entity(monkeypatch):
     )
 
     monkeypatch.setattr(
-        entity.sentence_matcher,
+        entity.phrase_matcher,
         "load",
-        lambda docs: sentence_loaded.extend(docs),
+        lambda docs: phrase_loaded.extend(docs),
     )
 
     e = {
@@ -53,7 +53,7 @@ def test_index_entity(monkeypatch):
     entity.index_entity(e)
 
     assert word_loaded == [e]
-    assert sentence_loaded == [e]
+    assert phrase_loaded == [e]
 
 
 def test_add_surface_text_success(monkeypatch):

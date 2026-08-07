@@ -42,12 +42,12 @@ regex_model = RegexModel.load(
 )
 
 word_matcher = WordMatcher(dictionary)
-sentence_matcher = PhraseMatcher(dictionary)
+phrase_matcher = PhraseMatcher(dictionary)
 
 lemmatizer = Lemmatizer(dictionary)
 regex_controller = RegexController(regex_model)
 
 surface_text_extractor = SurfaceTextExtractor(
     word_matcher,
-    sentence_matcher,
+    phrase_matcher,
 )

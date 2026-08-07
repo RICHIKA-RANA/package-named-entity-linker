@@ -1,10 +1,10 @@
 from talkingdb_nel.services.entity.base import (
     entity_model,
     lemmatizer,
+    phrase_matcher,
     regex_conn,
     regex_controller,
     regex_model,
-    sentence_matcher,
     surface_text_extractor,
     word_matcher,
 )
@@ -13,7 +13,7 @@ from talkingdb_nel.services.symbolic.notag import NoTag
 
 def index_entity(entity: dict):
     word_matcher.load([entity])
-    sentence_matcher.load([entity])
+    phrase_matcher.load([entity])
 
 
 def create_entity(entity: dict):
@@ -129,7 +129,7 @@ def get_surface_texts(
         start = chunk["index"][0]
         text = " ".join(chunk["lemmatized_tokens"])
 
-        additional = sentence_matcher.get_suggestions(
+        additional = phrase_matcher.get_suggestions(
             text,
             max_edit_distance=1,
         )

@@ -36,7 +36,7 @@ def word_matcher():
 
 
 @pytest.fixture
-def sentence_matcher():
+def phrase_matcher():
     conn, dictionary = create_dictionary()
 
     matcher = PhraseMatcher(

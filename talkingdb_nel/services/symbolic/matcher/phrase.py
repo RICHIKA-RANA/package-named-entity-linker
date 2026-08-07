@@ -19,7 +19,7 @@ class PhraseMatcher(BaseMatcher):
         super().__init__(
             dictionary,
             max_edit_distance=max_edit_distance,
-            metadata_key="sentence_longest_length",
+            metadata_key="phrase_longest_length",
         )
 
     def load(self, entities):
@@ -68,14 +68,14 @@ class PhraseMatcher(BaseMatcher):
 
         return count
 
-    def load_sentences(
+    def load_phrases(
         self,
-        sentences: Iterable[str],
+        phrases: Iterable[str],
     ):
         count = 0
 
-        for sentence in sentences:
-            self.create_dictionary_entry(sentence)
+        for phrase in phrases:
+            self.create_dictionary_entry(phrase)
             count += 1
 
         return count

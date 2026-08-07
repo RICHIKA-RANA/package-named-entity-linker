@@ -17,7 +17,7 @@ class Token:
 @dataclass(slots=True)
 class ActiveMatch:
     """
-    A phrase currently being matched while scanning the sentence.
+    A phrase currently being matched while scanning the phrase.
     """
 
     phrase: str

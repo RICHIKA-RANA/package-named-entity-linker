@@ -30,7 +30,7 @@ def test_models_created():
 
 def test_services_created():
     assert isinstance(base.word_matcher, WordMatcher)
-    assert isinstance(base.sentence_matcher, PhraseMatcher)
+    assert isinstance(base.phrase_matcher, PhraseMatcher)
     assert isinstance(base.lemmatizer, Lemmatizer)
     assert isinstance(base.regex_controller, RegexController)
     assert isinstance(base.surface_text_extractor, SurfaceTextExtractor)
@@ -38,7 +38,7 @@ def test_services_created():
 
 def test_services_share_dictionary():
     assert base.word_matcher.dictionary is base.dictionary
-    assert base.sentence_matcher.dictionary is base.dictionary
+    assert base.phrase_matcher.dictionary is base.dictionary
     assert base.lemmatizer.dictionary is base.dictionary
 
 
