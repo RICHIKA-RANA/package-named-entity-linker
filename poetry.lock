@@ -1690,7 +1690,7 @@ optional = false
 python-versions = ">=3.12,<3.14"
 groups = ["main"]
 files = []
-develop = true
+develop = false
 
 [package.dependencies]
 dotenv = ">=0.9.9,<0.10.0"
@@ -1698,8 +1698,10 @@ minio = ">=7.2.0,<8.0.0"
 tenacity = ">=9.1.2,<10.0.0"
 
 [package.source]
-type = "directory"
-url = "../base-tdb-clients"
+type = "git"
+url = "https://github.com/TalkingDB/base-tdb-clients.git"
+reference = "9931c1f832d4772f5137cdc4bb193daadab2ad30"
+resolved_reference = "9931c1f832d4772f5137cdc4bb193daadab2ad30"
 
 [[package]]
 name = "talkingdb-helpers"
@@ -1709,18 +1711,20 @@ optional = false
 python-versions = ">=3.12,<3.14"
 groups = ["main"]
 files = []
-develop = true
+develop = false
 
 [package.dependencies]
 bcrypt = "^5.0.0"
 lxml = ">=6.0.0,<7.0.0"
 python-jose = {version = "^3.3.0", extras = ["cryptography"]}
-talkingdb-clients = {path = "../base-tdb-clients", develop = true}
-talkingdb-models = {path = "../base-tdb-models", develop = true}
+talkingdb-clients = {git = "https://github.com/TalkingDB/base-tdb-clients.git", rev = "9931c1f832d4772f5137cdc4bb193daadab2ad30"}
+talkingdb-models = {git = "https://github.com/TalkingDB/base-tdb-models.git", rev = "e4670ca4338c154dc048acc1eb480620447f696f"}
 
 [package.source]
-type = "directory"
-url = "../base-tdb-helpers"
+type = "git"
+url = "https://github.com/TalkingDB/base-tdb-helpers.git"
+reference = "1d226dfcf1dee6ede0dc76e5e5582c9423556562"
+resolved_reference = "1d226dfcf1dee6ede0dc76e5e5582c9423556562"
 
 [[package]]
 name = "talkingdb-models"
@@ -1730,7 +1734,7 @@ optional = false
 python-versions = ">=3.12,<3.14"
 groups = ["main"]
 files = []
-develop = true
+develop = false
 
 [package.dependencies]
 networkx = "^3.6.1"
@@ -1738,8 +1742,10 @@ pydantic = {version = ">=2.12.5,<3.0.0", extras = ["email"]}
 smart-slugify = ">=0.1.2,<0.2.0"
 
 [package.source]
-type = "directory"
-url = "../base-tdb-models"
+type = "git"
+url = "https://github.com/TalkingDB/base-tdb-models.git"
+reference = "e4670ca4338c154dc048acc1eb480620447f696f"
+resolved_reference = "e4670ca4338c154dc048acc1eb480620447f696f"
 
 [[package]]
 name = "tenacity"
@@ -2135,4 +2141,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "5fcd859cc7df3466ab932e2275d0babeb9d2c3e8976a8107731e84b7d0de0ba0"
+content-hash = "5b6bae2eb37efad9bf6413241b0a5b4e25304d6df66cc2aae8c085ad1ee4763a"

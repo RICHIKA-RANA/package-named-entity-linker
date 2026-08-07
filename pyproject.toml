@@ -23,9 +23,9 @@ debugpy = ">=1.8.19,<2.0.0"
 redis = "^7.4.0"
 networkx = "^3.6.1"
 
-talkingdb-models = { path = "../base-tdb-models", develop = true }
-talkingdb-clients = { path = "../base-tdb-clients", develop = true }
-talkingdb-helpers = { path = "../base-tdb-helpers", develop = true }
+talkingdb-models = { git = "git+https://github.com/TalkingDB/base-tdb-models.git", rev = "e4670ca4338c154dc048acc1eb480620447f696f" }
+talkingdb-clients = { git = "git+https://github.com/TalkingDB/base-tdb-clients.git", rev = "9931c1f832d4772f5137cdc4bb193daadab2ad30" }
+talkingdb-helpers = { git = "git+https://github.com/TalkingDB/base-tdb-helpers.git", rev = "1d226dfcf1dee6ede0dc76e5e5582c9423556562" }
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4"
