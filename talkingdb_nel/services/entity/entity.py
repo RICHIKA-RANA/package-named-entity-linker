@@ -4,14 +4,14 @@ from talkingdb.clients.sqlite import sqlite_conn,DICTIONARY_DB, ENTITY_DB, REGEX
 from talkingdb.models.dictionary.dictionary import DictionaryModel
 from talkingdb.models.entity.entity import EntityModel
 from talkingdb.models.rule.regex import RegexModel
-from talkingdb_nel.services.lexigraph.extract_surface_text import (
+from talkingdb_nel.services.lexigraph.extractor import (
     SurfaceTextExtractor,
 )
 from talkingdb_nel.services.lexigraph.lemmatizer import Lemmatizer
 from talkingdb_nel.services.lexigraph.lexigraph import LexiGraph
 from talkingdb_nel.services.lexigraph.notag import NoTag
 from talkingdb_nel.services.rule.regex_controller import RegexController
-from talkingdb_nel.services.sentencegraph.sentence_symspell import (
+from talkingdb_nel.services.lexigraph.sentence_symspell import (
     SentenceSymSpell,
 )
 

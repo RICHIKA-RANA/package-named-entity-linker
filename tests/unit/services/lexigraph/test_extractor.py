@@ -1,6 +1,6 @@
 import pytest
 
-from talkingdb_nel.services.lexigraph.extract_surface_text import (
+from talkingdb_nel.services.lexigraph.extractor import (
     SurfaceTextExtractor,
 )
 

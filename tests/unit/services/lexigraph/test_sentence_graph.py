@@ -1,7 +1,7 @@
 import sqlite3
 
 from talkingdb.models.dictionary.dictionary import DictionaryModel
-from talkingdb_nel.services.sentencegraph import SentenceGraph
+from talkingdb_nel.services.lexigraph.sentence_graph import SentenceGraph
 
 
 def build_graph():

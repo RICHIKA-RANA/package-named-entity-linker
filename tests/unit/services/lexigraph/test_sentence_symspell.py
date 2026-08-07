@@ -1,7 +1,7 @@
 import sqlite3
 
 from talkingdb.models.dictionary.dictionary import DictionaryModel
-from talkingdb_nel.services.sentencegraph.sentence_symspell import (
+from talkingdb_nel.services.lexigraph.sentence_symspell import (
     SentenceSymSpell,
 )
 
