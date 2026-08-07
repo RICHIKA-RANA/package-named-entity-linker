@@ -1,6 +1,6 @@
 import pytest
 
-from talkingdb_nel.services.lexigraph.notag import NoTag
+from talkingdb_nel.services.symbolic.notag import NoTag
 
 
 class TestNoTag:

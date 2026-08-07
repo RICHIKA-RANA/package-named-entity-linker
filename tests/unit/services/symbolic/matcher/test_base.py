@@ -1,4 +1,4 @@
-from talkingdb_nel.services.lexigraph.matcher.base import BaseMatcher
+from talkingdb_nel.services.symbolic.matcher.base import BaseMatcher
 
 
 def test_create_dictionary_entry(word_matcher):

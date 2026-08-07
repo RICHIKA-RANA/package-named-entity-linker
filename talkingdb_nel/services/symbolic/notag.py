@@ -1,4 +1,4 @@
-from talkingdb_nel.services.lexigraph.tokenizer import Tokenizer
+from talkingdb_nel.services.symbolic.tokenizer import Tokenizer
 
 
 class NoTag:

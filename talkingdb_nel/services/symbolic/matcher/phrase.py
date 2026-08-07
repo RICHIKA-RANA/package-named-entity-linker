@@ -2,17 +2,12 @@ from collections.abc import Iterable
 
 from talkingdb.models.dictionary.dictionary import DictionaryModel
 
-from talkingdb_nel.services.lexigraph.tokenizer import Tokenizer
-
 from .base import BaseMatcher
 
 
-class WordMatcher(BaseMatcher):
+class PhraseMatcher(BaseMatcher):
     """
-    Matcher operating on individual words.
-
-    Surface text is tokenized before being added to the
-    dictionary.
+    Matcher operating on complete surface-text phrases.
     """
 
     def __init__(
@@ -24,7 +19,7 @@ class WordMatcher(BaseMatcher):
         super().__init__(
             dictionary,
             max_edit_distance=max_edit_distance,
-            metadata_key="longest_word_length",
+            metadata_key="sentence_longest_length",
         )
 
     def load(self, entities):
@@ -32,21 +27,18 @@ class WordMatcher(BaseMatcher):
         Supported formats
 
         {
-            "surface_text": [
-                "United States",
-                "USA"
+            "surface_texts": [
+                "New York City",
+                "NYC"
             ]
         }
 
         or
 
         {
-            "surface_text": [
+            "surface_texts": [
                 {
-                    "surface_text": "United States"
-                },
-                {
-                    "surface_text": "USA"
+                    "surface_text": "New York City"
                 }
             ]
         }
@@ -57,7 +49,7 @@ class WordMatcher(BaseMatcher):
         for entity in entities:
 
             surface_texts = entity.get(
-                "surface_text",
+                "surface_texts",
                 [],
             )
 
@@ -72,22 +64,24 @@ class WordMatcher(BaseMatcher):
                 if not surface:
                     continue
 
-                for token, *_ in Tokenizer.tokenize(
-                    surface.lower()
-                ):
-                    self.create_dictionary_entry(token)
-                    count += 1
+                self.create_dictionary_entry(
+                    surface
+                )
+
+                count += 1
 
         return count
 
-    def load_words(
+    def load_sentences(
         self,
-        words: Iterable[str],
+        sentences: Iterable[str],
     ):
         count = 0
 
-        for word in words:
-            self.create_dictionary_entry(word)
+        for sentence in sentences:
+            self.create_dictionary_entry(
+                sentence
+            )
             count += 1
 
         return count

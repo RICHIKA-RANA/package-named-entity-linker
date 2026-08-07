@@ -1,6 +1,4 @@
-from talkingdb_nel.services.lexigraph.distance import (
-    damerau_levenshtein,
-)
+from talkingdb_nel.services.symbolic.distance import damerau_levenshtein
 
 
 def test_same_word():

@@ -1,6 +1,6 @@
 import pytest
 
-from talkingdb_nel.services.lexigraph.lemmatizer import Lemmatizer
+from talkingdb_nel.services.symbolic.lemmatizer import Lemmatizer
 
 
 class FakeStore:

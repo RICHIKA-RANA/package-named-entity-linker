@@ -1,8 +1,6 @@
 import pytest
 
-from talkingdb_nel.services.lexigraph.extractor import (
-    SurfaceTextExtractor,
-)
+from talkingdb_nel.services.symbolic.extractor import SurfaceTextExtractor
 
 
 class FakeWordMatcher:

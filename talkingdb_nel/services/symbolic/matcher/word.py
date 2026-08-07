@@ -2,12 +2,17 @@ from collections.abc import Iterable
 
 from talkingdb.models.dictionary.dictionary import DictionaryModel
 
+from talkingdb_nel.services.symbolic.tokenizer import Tokenizer
+
 from .base import BaseMatcher
 
 
-class SentenceMatcher(BaseMatcher):
+class WordMatcher(BaseMatcher):
     """
-    Matcher operating on complete surface-text phrases.
+    Matcher operating on individual words.
+
+    Surface text is tokenized before being added to the
+    dictionary.
     """
 
     def __init__(
@@ -19,7 +24,7 @@ class SentenceMatcher(BaseMatcher):
         super().__init__(
             dictionary,
             max_edit_distance=max_edit_distance,
-            metadata_key="sentence_longest_length",
+            metadata_key="longest_word_length",
         )
 
     def load(self, entities):
@@ -27,18 +32,21 @@ class SentenceMatcher(BaseMatcher):
         Supported formats
 
         {
-            "surface_texts": [
-                "New York City",
-                "NYC"
+            "surface_text": [
+                "United States",
+                "USA"
             ]
         }
 
         or
 
         {
-            "surface_texts": [
+            "surface_text": [
                 {
-                    "surface_text": "New York City"
+                    "surface_text": "United States"
+                },
+                {
+                    "surface_text": "USA"
                 }
             ]
         }
@@ -49,7 +57,7 @@ class SentenceMatcher(BaseMatcher):
         for entity in entities:
 
             surface_texts = entity.get(
-                "surface_texts",
+                "surface_text",
                 [],
             )
 
@@ -64,24 +72,22 @@ class SentenceMatcher(BaseMatcher):
                 if not surface:
                     continue
 
-                self.create_dictionary_entry(
-                    surface
-                )
-
-                count += 1
+                for token, *_ in Tokenizer.tokenize(
+                    surface.lower()
+                ):
+                    self.create_dictionary_entry(token)
+                    count += 1
 
         return count
 
-    def load_sentences(
+    def load_words(
         self,
-        sentences: Iterable[str],
+        words: Iterable[str],
     ):
         count = 0
 
-        for sentence in sentences:
-            self.create_dictionary_entry(
-                sentence
-            )
+        for word in words:
+            self.create_dictionary_entry(word)
             count += 1
 
         return count

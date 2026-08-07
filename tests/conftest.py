@@ -3,8 +3,8 @@ import sqlite3
 import pytest
 
 from talkingdb.models.dictionary.dictionary import DictionaryModel
-from talkingdb_nel.services.lexigraph.matcher.sentence import SentenceMatcher
-from talkingdb_nel.services.lexigraph.matcher.word import WordMatcher
+from talkingdb_nel.services.symbolic.matcher.phrase import PhraseMatcher
+from talkingdb_nel.services.symbolic.matcher.word import WordMatcher
 
 
 def create_dictionary():
@@ -39,7 +39,7 @@ def word_matcher():
 def sentence_matcher():
     conn, dictionary = create_dictionary()
 
-    matcher = SentenceMatcher(
+    matcher = PhraseMatcher(
         dictionary=dictionary,
         max_edit_distance=2,
     )

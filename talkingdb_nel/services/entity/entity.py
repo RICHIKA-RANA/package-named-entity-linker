@@ -4,15 +4,12 @@ from talkingdb.clients.sqlite import sqlite_conn, DICTIONARY_DB, ENTITY_DB, REGE
 from talkingdb.models.dictionary.dictionary import DictionaryModel
 from talkingdb.models.entity.entity import EntityModel
 from talkingdb.models.rule.regex import RegexModel
-from talkingdb_nel.services.lexigraph.extractor import (
-    SurfaceTextExtractor,
-)
-from talkingdb_nel.services.lexigraph.lemmatizer import Lemmatizer
-from talkingdb_nel.services.lexigraph.notag import NoTag
-from talkingdb_nel.services.rule.regex_controller import RegexController
-
-from talkingdb_nel.services.lexigraph.matcher.sentence import SentenceMatcher
-from talkingdb_nel.services.lexigraph.matcher.word import WordMatcher
+from talkingdb_nel.services.symbolic.extractor import SurfaceTextExtractor
+from talkingdb_nel.services.symbolic.lemmatizer import Lemmatizer
+from talkingdb_nel.services.symbolic.notag import NoTag
+from talkingdb_nel.services.symbolic.regex import RegexController
+from talkingdb_nel.services.symbolic.matcher.phrase import PhraseMatcher
+from talkingdb_nel.services.symbolic.matcher.word import WordMatcher
 
 dictionary_conn = sqlite_conn(DICTIONARY_DB).__enter__()
 entity_conn = sqlite_conn(ENTITY_DB).__enter__()
@@ -40,7 +37,7 @@ entity_model = EntityModel.load(
 )
 
 word_matcher = WordMatcher(dictionary)
-sentence_matcher = SentenceMatcher(dictionary)
+sentence_matcher = PhraseMatcher(dictionary)
 
 lemmatizer = Lemmatizer(dictionary)
 
