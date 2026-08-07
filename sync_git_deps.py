@@ -1,16 +1,15 @@
-import subprocess
 import argparse
 import json
 import re
-from pathlib import Path
+import subprocess
 import tomllib
-
+from pathlib import Path
 
 # ------------------------------------------------------------
 # Paths
 # ------------------------------------------------------------
 
-ROOT = Path(__file__).parent                  # base-helpers
+ROOT = Path(__file__).parent  # base-helpers
 PYPROJECT = ROOT / "pyproject.toml"
 GIT_PACKAGES_JSON = ROOT / "git-packages.json"
 
@@ -32,6 +31,7 @@ PATH_DEP_PATTERN = re.compile(
 # Loaders
 # ------------------------------------------------------------
 
+
 def load_pyproject():
     with PYPROJECT.open("rb") as f:
         return tomllib.load(f)
@@ -50,6 +50,7 @@ def load_git_packages():
 # ------------------------------------------------------------
 # Git helpers
 # ------------------------------------------------------------
+
 
 def get_latest_commit(local_repo: Path, git_url: str) -> str:
     """
@@ -80,18 +81,19 @@ def get_latest_commit(local_repo: Path, git_url: str) -> str:
 # Main
 # ------------------------------------------------------------
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--mode",
         choices=["git", "local"],
         default="git",
-        help="git = force git deps, local = force path deps"
+        help="git = force git deps, local = force path deps",
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Check for updates without modifying pyproject.toml"
+        help="Check for updates without modifying pyproject.toml",
     )
     args = parser.parse_args()
 
@@ -134,7 +136,9 @@ def main():
                             print(f"→ {pkg}: would update to rev={commit}")
 
                 elif args.mode == "local":
-                    new_line = f'{pkg} = {{ path = "{cfg["local_path"]}", develop = true }}'
+                    new_line = (
+                        f'{pkg} = {{ path = "{cfg["local_path"]}", develop = true }}'
+                    )
                     if line.strip() != new_line.strip():
                         updates[line] = new_line
                         if args.dry_run:

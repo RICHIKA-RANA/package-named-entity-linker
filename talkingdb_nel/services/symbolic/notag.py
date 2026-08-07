@@ -3,9 +3,38 @@ from talkingdb_nel.services.symbolic.tokenizer import Tokenizer
 
 class NoTag:
     skip_list = {
-        ':', ';', '"', "'", '<', ',', '>', '.', '/', '?', '{', '[',
-        '}', ']', '\\', '|', '+', '=', '-', '_', ')', '(', '*', '&',
-        '^', '%', '$', '#', '@', '!', '~', '`'
+        ":",
+        ";",
+        '"',
+        "'",
+        "<",
+        ",",
+        ">",
+        ".",
+        "/",
+        "?",
+        "{",
+        "[",
+        "}",
+        "]",
+        "\\",
+        "|",
+        "+",
+        "=",
+        "-",
+        "_",
+        ")",
+        "(",
+        "*",
+        "&",
+        "^",
+        "%",
+        "$",
+        "#",
+        "@",
+        "!",
+        "~",
+        "`",
     }
 
     @classmethod
@@ -81,7 +110,9 @@ class NoTag:
             base = span["index"][0]
             span_text = span["surface_text"]
 
-            for token, (start, end), length in Tokenizer.tokenize(span_text, include_subtokens=False):
+            for token, (start, end), length in Tokenizer.tokenize(
+                span_text, include_subtokens=False
+            ):
                 # Skip punctuation/subtokens. Keep only the primary token.
                 if length != (end - start + 1):
                     continue
@@ -91,7 +122,7 @@ class NoTag:
 
                 if not any(ch.isalnum() for ch in token):
                     continue
-                
+
                 output.append(
                     {
                         "index": [base + start, base + end],

@@ -10,9 +10,7 @@ class Tokenizer:
 
     _NUMBER_RE = re.compile(r"-?\d+(?:[\d,])*(?:\.\d+)?")
 
-    _CAMEL_RE = re.compile(
-        r".+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)"
-    )
+    _CAMEL_RE = re.compile(r".+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)")
 
     @staticmethod
     def removeDuplicates(seq):
@@ -39,7 +37,6 @@ class Tokenizer:
 
     @staticmethod
     def tokenize(message, include_subtokens=True):
-
         results = []
         seen = set()
 
@@ -60,10 +57,8 @@ class Tokenizer:
                 p_end = start + punct.end() - 1
 
                 Tokenizer._add(results, seen, punct.group(), p_start, p_end)
-                Tokenizer._add(
-                    results, seen, text[:punct.start()], start, p_start)
-                Tokenizer._add(
-                    results, seen, text[punct.end():], p_end + 1, end)
+                Tokenizer._add(results, seen, text[: punct.start()], start, p_start)
+                Tokenizer._add(results, seen, text[punct.end() :], p_end + 1, end)
 
             # numbers
             for number in Tokenizer._NUMBER_RE.finditer(text):

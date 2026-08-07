@@ -1,8 +1,8 @@
 import sqlite3
 
 import pytest
-
 from talkingdb.models.dictionary.dictionary import DictionaryModel
+
 from talkingdb_nel.services.symbolic.matcher.phrase import PhraseMatcher
 from talkingdb_nel.services.symbolic.matcher.word import WordMatcher
 

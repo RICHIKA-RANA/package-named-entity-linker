@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from talkingdb_nel.api import nel
 
 app = FastAPI(title="Named Entity Linker")

@@ -1,6 +1,3 @@
-import re
-
-
 class RegexController:
     def __init__(self, regex_model):
         self.regex_model = regex_model

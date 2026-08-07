@@ -85,5 +85,4 @@ class TestNoTag:
     def test_tokenizer_primary_tokens(self, text, expected):
         result = NoTag.get_no_tags(text, [])
 
-        assert [x["surface_text"]
-                for x in result] == [e.lower() for e in expected]
+        assert [x["surface_text"] for x in result] == [e.lower() for e in expected]

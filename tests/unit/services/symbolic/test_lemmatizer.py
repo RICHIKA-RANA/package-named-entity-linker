@@ -117,10 +117,7 @@ def test_multiple_possible_splits():
 
     assert len(result) == 2
 
-    assert {
-        tuple(r["lemmatized_tokens"])
-        for r in result
-    } == {
+    assert {tuple(r["lemmatized_tokens"]) for r in result} == {
         ("supermarket",),
         ("super", "market"),
     }

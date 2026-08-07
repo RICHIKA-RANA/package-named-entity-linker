@@ -55,14 +55,12 @@ class WordMatcher(BaseMatcher):
         count = 0
 
         for entity in entities:
-
             surface_texts = entity.get(
                 "surface_text",
                 [],
             )
 
             for surface in surface_texts:
-
                 if isinstance(surface, dict):
                     surface = surface.get(
                         "surface_text",
@@ -72,9 +70,7 @@ class WordMatcher(BaseMatcher):
                 if not surface:
                     continue
 
-                for token, *_ in Tokenizer.tokenize(
-                    surface.lower()
-                ):
+                for token, *_ in Tokenizer.tokenize(surface.lower()):
                     self.create_dictionary_entry(token)
                     count += 1
 

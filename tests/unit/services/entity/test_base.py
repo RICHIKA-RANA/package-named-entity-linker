@@ -3,6 +3,7 @@ import sqlite3
 from talkingdb.models.dictionary.dictionary import DictionaryModel
 from talkingdb.models.entity.entity import EntityModel
 from talkingdb.models.rule.regex import RegexModel
+
 from talkingdb_nel.services.entity import base
 from talkingdb_nel.services.symbolic.extractor import SurfaceTextExtractor
 from talkingdb_nel.services.symbolic.lemmatizer import Lemmatizer

@@ -7,15 +7,28 @@ from talkingdb_nel.services.entity import entity
 def reset_mocks(monkeypatch):
     monkeypatch.setattr(entity.entity_model, "add_entity", lambda **kwargs: None)
     monkeypatch.setattr(entity.entity_model, "get_entity", lambda entity_id: None)
-    monkeypatch.setattr(entity.entity_model, "update_surface_texts", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        entity.entity_model, "update_surface_texts", lambda *args, **kwargs: None
+    )
     monkeypatch.setattr(entity.entity_model, "add_fact", lambda **kwargs: None)
 
-    monkeypatch.setattr(entity.word_matcher, "load",  lambda *args, **kwargs: None,)
-    monkeypatch.setattr(entity.sentence_matcher, "load", lambda *args, **kwargs: None,)
+    monkeypatch.setattr(
+        entity.word_matcher,
+        "load",
+        lambda *args, **kwargs: None,
+    )
+    monkeypatch.setattr(
+        entity.sentence_matcher,
+        "load",
+        lambda *args, **kwargs: None,
+    )
 
     monkeypatch.setattr(entity.regex_controller, "process", lambda text: [])
-    monkeypatch.setattr(entity.surface_text_extractor, "extract", lambda *args, **kwargs: [])
-    
+    monkeypatch.setattr(
+        entity.surface_text_extractor, "extract", lambda *args, **kwargs: []
+    )
+
+
 def test_index_entity(monkeypatch):
     word_loaded = []
     sentence_loaded = []
@@ -41,7 +54,8 @@ def test_index_entity(monkeypatch):
 
     assert word_loaded == [e]
     assert sentence_loaded == [e]
-    
+
+
 def test_add_surface_text_success(monkeypatch):
     monkeypatch.setattr(
         entity.entity_model,
@@ -75,7 +89,8 @@ def test_add_surface_text_success(monkeypatch):
         "Apple",
         "Apple Inc",
     ]
-    
+
+
 def test_add_surface_text_missing_entity(monkeypatch):
     monkeypatch.setattr(
         entity.entity_model,
@@ -92,6 +107,7 @@ def test_add_surface_text_missing_entity(monkeypatch):
         "success": False,
         "message": "Entity not found",
     }
+
 
 def test_add_surface_text_duplicate(monkeypatch):
     monkeypatch.setattr(
@@ -111,7 +127,8 @@ def test_add_surface_text_duplicate(monkeypatch):
         "success": False,
         "message": "Already exists",
     }
-    
+
+
 def test_create_fact(monkeypatch):
     called = {}
 
@@ -134,7 +151,8 @@ def test_create_fact(monkeypatch):
     assert called["target"] == "B"
     assert called["predicate"] == "KNOWS"
     assert called["since"] == 2025
-    
+
+
 def test_create_regex(monkeypatch):
     called = []
 
@@ -151,6 +169,4 @@ def test_create_regex(monkeypatch):
 
     assert result == {"success": True}
 
-    assert called == [
-        ("Date", r"\d{4}")
-    ]
+    assert called == [("Date", r"\d{4}")]

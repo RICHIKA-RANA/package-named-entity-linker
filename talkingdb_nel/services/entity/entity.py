@@ -1,12 +1,12 @@
 from talkingdb_nel.services.entity.base import (
     entity_model,
-    regex_model,
-    regex_conn,
-    word_matcher,
-    sentence_matcher,
     lemmatizer,
+    regex_conn,
     regex_controller,
+    regex_model,
+    sentence_matcher,
     surface_text_extractor,
+    word_matcher,
 )
 from talkingdb_nel.services.symbolic.notag import NoTag
 
@@ -93,11 +93,7 @@ def get_surface_texts(
         word_correction=word_correction,
     )
 
-    universal_entities = [
-        entity
-        for entity in universal_entities
-        if entity["entities"]
-    ]
+    universal_entities = [entity for entity in universal_entities if entity["entities"]]
 
     regex_entities = regex_controller.process(message_text)
 

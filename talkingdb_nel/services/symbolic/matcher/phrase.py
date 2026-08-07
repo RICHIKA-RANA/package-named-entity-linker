@@ -47,14 +47,12 @@ class PhraseMatcher(BaseMatcher):
         count = 0
 
         for entity in entities:
-
             surface_texts = entity.get(
                 "surface_texts",
                 [],
             )
 
             for surface in surface_texts:
-
                 if isinstance(surface, dict):
                     surface = surface.get(
                         "surface_text",
@@ -64,9 +62,7 @@ class PhraseMatcher(BaseMatcher):
                 if not surface:
                     continue
 
-                self.create_dictionary_entry(
-                    surface
-                )
+                self.create_dictionary_entry(surface)
 
                 count += 1
 
@@ -79,9 +75,7 @@ class PhraseMatcher(BaseMatcher):
         count = 0
 
         for sentence in sentences:
-            self.create_dictionary_entry(
-                sentence
-            )
+            self.create_dictionary_entry(sentence)
             count += 1
 
         return count

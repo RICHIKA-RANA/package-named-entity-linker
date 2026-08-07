@@ -11,6 +11,7 @@ def client():
     app.include_router(nel.router)
     return TestClient(app)
 
+
 def test_extract_surface_text(client, monkeypatch):
     monkeypatch.setattr(
         nel,
@@ -28,7 +29,8 @@ def test_extract_surface_text(client, monkeypatch):
 
     assert response.status_code == 200
     assert response.json() == ["New York"]
-    
+
+
 def test_extract_surface_text_word_correction(client, monkeypatch):
     calls = {}
 
@@ -47,7 +49,8 @@ def test_extract_surface_text_word_correction(client, monkeypatch):
     )
 
     assert calls["word_correction"] is True
-    
+
+
 def test_create_entity(client, monkeypatch):
     payload = {}
 
@@ -70,7 +73,8 @@ def test_create_entity(client, monkeypatch):
     assert payload["_id"] == "Q1"
     assert payload["label"] == "Apple"
     assert payload["surface_texts"] == ["apple"]
-    
+
+
 def test_create_entity_requires_alias(client):
     response = client.post(
         "/nel/entity",
@@ -80,7 +84,8 @@ def test_create_entity_requires_alias(client):
     )
 
     assert response.status_code == 200
-    
+
+
 def test_add_surface_text(client, monkeypatch):
     calls = {}
 
@@ -103,7 +108,8 @@ def test_add_surface_text(client, monkeypatch):
         "entity_id": "Q1",
         "surface_text": "Apple Inc",
     }
-    
+
+
 def test_create_fact(client, monkeypatch):
     calls = {}
 
@@ -135,6 +141,7 @@ def test_create_fact(client, monkeypatch):
         "confidence": 0.9,
     }
 
+
 def test_create_fact_without_attributes(client, monkeypatch):
     monkeypatch.setattr(nel, "create_fact", lambda **kwargs: kwargs)
 
@@ -148,7 +155,8 @@ def test_create_fact_without_attributes(client, monkeypatch):
     )
 
     assert response.status_code == 200
-    
+
+
 def test_create_regex(client, monkeypatch):
     calls = {}
 

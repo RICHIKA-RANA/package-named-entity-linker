@@ -1,4 +1,4 @@
-from typing import List, Any
+from typing import Any, List
 
 from fastapi import APIRouter
 from pydantic import BaseModel, ConfigDict, Field
@@ -61,9 +61,7 @@ async def extract_surface_text(
 async def create_new_entity(
     request: EntityCreateRequest,
 ):
-    return create_entity(
-        request.model_dump(by_alias=True)
-    )
+    return create_entity(request.model_dump(by_alias=True))
 
 
 @router.put("/surface-text")

@@ -1,8 +1,9 @@
-def get_distance(seq1, seq2, seqType='w'):
-    if (seqType == 's'):
-        seq1 = seq1.split(' ')
-        seq2 = seq2.split(' ')
+def get_distance(seq1, seq2, seqType="w"):
+    if seqType == "s":
+        seq1 = seq1.split(" ")
+        seq2 = seq2.split(" ")
     return damerau_levenshtein(seq1, seq2)
+
 
 def damerau_levenshtein(seq1, seq2):
     """
@@ -40,12 +41,7 @@ def damerau_levenshtein(seq1, seq2):
 
             value = min(insert_cost, delete_cost, replace_cost)
 
-            if (
-                i > 0
-                and j > 0
-                and c1 == seq2[j - 1]
-                and seq1[i - 1] == c2
-            ):
+            if i > 0 and j > 0 and c1 == seq2[j - 1] and seq1[i - 1] == c2:
                 value = min(value, previous_previous[j - 1] + 1)
 
             current.append(value)

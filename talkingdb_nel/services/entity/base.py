@@ -1,14 +1,15 @@
 import sqlite3
 
 from talkingdb.clients.sqlite import (
-    sqlite_conn,
     DICTIONARY_DB,
     ENTITY_DB,
     REGEX_DB,
+    sqlite_conn,
 )
 from talkingdb.models.dictionary.dictionary import DictionaryModel
 from talkingdb.models.entity.entity import EntityModel
 from talkingdb.models.rule.regex import RegexModel
+
 from talkingdb_nel.services.symbolic.extractor import SurfaceTextExtractor
 from talkingdb_nel.services.symbolic.lemmatizer import Lemmatizer
 from talkingdb_nel.services.symbolic.matcher.phrase import PhraseMatcher

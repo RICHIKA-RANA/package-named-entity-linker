@@ -96,10 +96,7 @@ class BaseMatcher:
         if text.isdigit():
             return [(text, (0, 0))]
 
-        if (
-            len(text) - self.longest_word_length
-            > max_edit_distance
-        ):
+        if len(text) - self.longest_word_length > max_edit_distance:
             return []
 
         suggestions = {}
@@ -151,10 +148,7 @@ class BaseMatcher:
                             distance,
                         )
 
-            if (
-                len(text) - len(candidate)
-                < max_edit_distance
-            ):
+            if len(text) - len(candidate) < max_edit_distance:
                 for i in range(len(candidate)):
                     delete = candidate[:i] + candidate[i + 1 :]
 
@@ -173,14 +167,10 @@ class BaseMatcher:
         )
 
     def contains(self, text: str):
-        return self.dictionary.has_word(
-            text.lower().strip()
-        )
+        return self.dictionary.has_word(text.lower().strip())
 
     def frequency(self, text: str):
-        return self.dictionary.get_frequency(
-            text.lower().strip()
-        )
+        return self.dictionary.get_frequency(text.lower().strip())
 
     def close(self):
         self.dictionary.close()

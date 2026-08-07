@@ -15,24 +15,24 @@ packages = [
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.14"
-
 fastapi = ">=0.125.0,<0.126.0"
 uvicorn = { version = ">=0.38.0,<0.39.0", extras = ["standard"] }
 requests = ">=2.32.5,<3.0.0"
 pydantic = ">=2.12.5,<3.0.0"
 debugpy = ">=1.8.19,<2.0.0"
+redis = "^7.4.0"
+networkx = "^3.6.1"
 
 talkingdb-models = { path = "../base-tdb-models", develop = true }
 talkingdb-clients = { path = "../base-tdb-clients", develop = true }
 talkingdb-helpers = { path = "../base-tdb-helpers", develop = true }
 
-redis = "^7.4.0"
-networkx = "^3.6.1"
-
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4"
 pytest-cov = "^7.0"
 pytest-mock = "^3.15"
+httpx = "^0.28.1"
+ruff = "^0.16.1"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -43,3 +43,22 @@ addopts = [
     "--strict-markers",
     "--strict-config",
 ]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "I",
+]
+
+[tool.coverage.run]
+source = ["talkingdb_nel"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true

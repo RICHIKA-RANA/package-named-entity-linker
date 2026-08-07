@@ -63,14 +63,11 @@ class FakePhraseMatcher:
         self,
         phrase,
     ):
-        return self._phrases.get(
-            phrase.lower()
-        )
+        return self._phrases.get(phrase.lower())
 
 
 @pytest.fixture
 def extractor():
-
     return SurfaceTextExtractor(
         word_matcher=FakeWordMatcher(),
         phrase_matcher=FakePhraseMatcher(),
@@ -80,7 +77,6 @@ def extractor():
 def test_extract_single_word_phrase(
     extractor,
 ):
-
     result = extractor.extract(
         "new",
         [],
@@ -101,17 +97,12 @@ def test_extract_single_word_phrase(
 def test_extract_two_word_phrase(
     extractor,
 ):
-
     result = extractor.extract(
         "new york",
         [],
     )
 
-    matches = [
-        item
-        for item in result
-        if item["corrected_text"] == "new york"
-    ]
+    matches = [item for item in result if item["corrected_text"] == "new york"]
 
     assert len(matches) == 1
 
@@ -126,17 +117,12 @@ def test_extract_two_word_phrase(
 def test_extract_phrase_with_prefix_text(
     extractor,
 ):
-
     result = extractor.extract(
         "hello new york",
         [],
     )
 
-    matches = [
-        item
-        for item in result
-        if item["corrected_text"] == "new york"
-    ]
+    matches = [item for item in result if item["corrected_text"] == "new york"]
 
     assert len(matches) == 1
 
@@ -151,7 +137,6 @@ def test_extract_phrase_with_prefix_text(
 def test_breakpoint_does_not_join_phrase(
     extractor,
 ):
-
     result = extractor.extract(
         "new york",
         [
@@ -162,34 +147,25 @@ def test_breakpoint_does_not_join_phrase(
         ],
     )
 
-    assert not any(
-        item["corrected_text"] == "new york"
-        for item in result
-    )
+    assert not any(item["corrected_text"] == "new york" for item in result)
 
 
 def test_preserves_entity_lookup(
     extractor,
 ):
-
     result = extractor.extract(
         "new york",
         [],
     )
 
-    match = next(
-        item
-        for item in result
-        if item["corrected_text"] == "new york"
-    )
+    match = next(item for item in result if item["corrected_text"] == "new york")
 
-    assert match["entities"] == [('new york', (100, 0))]
+    assert match["entities"] == [("new york", (100, 0))]
 
 
 def test_empty_input(
     extractor,
 ):
-
     result = extractor.extract(
         "",
         [],
@@ -201,7 +177,6 @@ def test_empty_input(
 def test_no_match_returns_empty(
     extractor,
 ):
-
     result = extractor.extract(
         "unknown",
         [],
@@ -213,63 +188,46 @@ def test_no_match_returns_empty(
 def test_word_correction_disabled(
     extractor,
 ):
-
     result = extractor.extract(
         "nwe york",
         [],
         word_correction=False,
     )
 
-    assert not any(
-        item["corrected_text"] == "new york"
-        for item in result
-    )
+    assert not any(item["corrected_text"] == "new york" for item in result)
 
 
 def test_phrase_expires_after_large_gap(
     extractor,
 ):
-
     result = extractor.extract(
         "new hello hello hello hello york",
         [],
     )
 
-    assert not any(
-        item["corrected_text"] == "new york"
-        for item in result
-    )
+    assert not any(item["corrected_text"] == "new york" for item in result)
 
 
 def test_case_insensitive(
     extractor,
 ):
-
     result = extractor.extract(
         "NEW YORK",
         [],
     )
 
-    assert any(
-        item["corrected_text"] == "new york"
-        for item in result
-    )
+    assert any(item["corrected_text"] == "new york" for item in result)
 
 
 def test_duplicate_phrase_not_returned_twice(
     extractor,
 ):
-
     result = extractor.extract(
         "new york",
         [],
     )
 
-    matches = [
-        item
-        for item in result
-        if item["corrected_text"] == "new york"
-    ]
+    matches = [item for item in result if item["corrected_text"] == "new york"]
 
     assert len(matches) == 1
 
@@ -277,17 +235,12 @@ def test_duplicate_phrase_not_returned_twice(
 def test_repeated_words(
     extractor,
 ):
-
     result = extractor.extract(
         "very very good",
         [],
     )
 
-    matches = [
-        item
-        for item in result
-        if item["corrected_text"] == "very good"
-    ]
+    matches = [item for item in result if item["corrected_text"] == "very good"]
 
     assert len(matches) == 1
 
@@ -295,16 +248,12 @@ def test_repeated_words(
 def test_overlapping_phrases(
     extractor,
 ):
-
     result = extractor.extract(
         "new york",
         [],
     )
 
-    corrected = {
-        item["corrected_text"]
-        for item in result
-    }
+    corrected = {item["corrected_text"] for item in result}
 
     assert "new" in corrected
     assert "new york" in corrected

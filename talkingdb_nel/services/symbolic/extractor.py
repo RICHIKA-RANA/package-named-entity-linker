@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from collections import defaultdict, Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
+
 from .distance import get_distance
 from .tokenizer import Tokenizer
 
@@ -60,7 +61,6 @@ class SurfaceTextExtractor:
         phrase: str,
         token_index: int,
     ) -> ActiveMatch:
-
         words = phrase.lower().split()
 
         remaining = words.copy()
@@ -109,9 +109,7 @@ class SurfaceTextExtractor:
         normalized = text
         for start, length in breakpoints:
             normalized = (
-                normalized[:start]
-                + (" " * length)
-                + normalized[start + length:]
+                normalized[:start] + (" " * length) + normalized[start + length :]
             )
 
         breakpoint_starts = {start for start, _ in breakpoints}
@@ -132,18 +130,13 @@ class SurfaceTextExtractor:
         ]
 
         # Map token index -> Token
-        word_index_reference = {
-            i: token
-            for i, token in enumerate(tokens)
-        }
+        word_index_reference = {i: token for i, token in enumerate(tokens)}
 
         # Determine which token immediately follows a breakpoint.
         breakpoints_next_word_indices: set[int] = set()
 
         for index, token in enumerate(tokens):
-
             for bp in breakpoint_starts:
-
                 if bp < token.start:
                     breakpoints_next_word_indices.add(index)
                     break
@@ -183,11 +176,7 @@ class SurfaceTextExtractor:
         cache: dict[str, list] = {}
         corrections: dict[str, dict[str, tuple[int, int]]] = defaultdict(dict)
 
-        lookup_distance = (
-            max_word_edit_distance
-            if word_correction
-            else 0
-        )
+        lookup_distance = max_word_edit_distance if word_correction else 0
 
         for token in tokens:
             word = token.text
@@ -258,11 +247,9 @@ class SurfaceTextExtractor:
             *,
             required_words: list[str] | None = None,
         ) -> list:
-
             key = text.lower()
 
             if key not in cache:
-
                 suggestions = self.phrase_matcher.get_suggestions(
                     key,
                     max_edit_distance=0,
@@ -272,7 +259,6 @@ class SurfaceTextExtractor:
                     filtered = []
 
                     for suggestion in suggestions:
-
                         phrase = (
                             suggestion[0]
                             if isinstance(suggestion, tuple)
@@ -304,20 +290,14 @@ class SurfaceTextExtractor:
                 #
                 if required_words:
                     for word in required_words:
-
                         bucket = cache.setdefault(word.lower(), [])
 
                         existing = {
-                            (
-                                s[0]
-                                if isinstance(s, tuple)
-                                else s.term
-                            ).lower()
+                            (s[0] if isinstance(s, tuple) else s.term).lower()
                             for s in bucket
                         }
 
                         for suggestion in suggestions:
-
                             phrase = (
                                 suggestion[0]
                                 if isinstance(suggestion, tuple)
@@ -329,6 +309,7 @@ class SurfaceTextExtractor:
                                 existing.add(phrase)
 
             return cache[key]
+
         #
         # Single-word phrases
         #
@@ -343,13 +324,11 @@ class SurfaceTextExtractor:
         # Adjacent two-word phrases
         #
         for i in range(len(tokens) - 1):
-
             left = tokens[i].text
             right = tokens[i + 1].text
 
             for left_candidate in possible_corrections[left]:
                 for right_candidate in possible_corrections[right]:
-
                     lookup(
                         f"{left_candidate} {right_candidate}",
                         required_words=[
@@ -376,21 +355,15 @@ class SurfaceTextExtractor:
         """
 
         word_options = list(
-            {
-                option.lower()
-                for option in possible_corrections[token.text]
-            }
+            {option.lower() for option in possible_corrections[token.text]}
         )
         #
         # Current-word phrase suggestions
         #
         for option in word_options:
             for suggestion in phrase_cache.get(option, []):
-
                 phrase = (
-                    suggestion[0]
-                    if isinstance(suggestion, tuple)
-                    else suggestion.term
+                    suggestion[0] if isinstance(suggestion, tuple) else suggestion.term
                 ).lower()
 
                 words = phrase.split()
@@ -404,7 +377,6 @@ class SurfaceTextExtractor:
                     remaining.remove(option)
 
                 if phrase not in current_queue and phrase not in next_queue:
-
                     next_queue[phrase].append(
                         ActiveMatch(
                             phrase=phrase,
@@ -456,12 +428,10 @@ class SurfaceTextExtractor:
                     continue
 
                 else:
-
                     stayed = []
                     moved = []
 
                     for state in current_queue.pop(phrase):
-
                         if state.crossed_breakpoint:
                             # Legacy behavior:
                             # once a breakpoint has been crossed, an existing phrase
@@ -493,21 +463,17 @@ class SurfaceTextExtractor:
         # Adjacent 2-word phrase suggestions
         #
         if token_index + 1 < len(tokens):
-
             next_token = tokens[token_index + 1]
 
             next_options = {
-                option.lower()
-                for option in possible_corrections[next_token.text]
+                option.lower() for option in possible_corrections[next_token.text]
             }
 
             for option in word_options:
                 for next_option in next_options:
-
                     key = f"{option} {next_option}"
 
                     for suggestion in phrase_cache.get(key, []):
-
                         phrase = (
                             suggestion[0]
                             if isinstance(suggestion, tuple)
@@ -523,7 +489,6 @@ class SurfaceTextExtractor:
                             remaining.remove(option)
 
                         if phrase not in current_queue and phrase not in next_queue:
-
                             next_queue[phrase].append(
                                 ActiveMatch(
                                     phrase=phrase,
@@ -534,15 +499,14 @@ class SurfaceTextExtractor:
                             )
 
                         elif phrase in current_queue and phrase not in next_queue:
-
                             moved = []
                             stayed = []
 
                             for state in current_queue.pop(phrase):
                                 if state.crossed_breakpoint:
                                     # Legacy behavior:
-                                    # once a breakpoint has been crossed, an existing phrase
-                                    # cannot continue matching.
+                                    # once a breakpoint has been crossed
+                                    # an existing phrase cannot continue matching.
                                     stayed.append(state)
 
                                 elif option in state.remaining:
@@ -558,10 +522,7 @@ class SurfaceTextExtractor:
                             if moved:
                                 next_queue[phrase].extend(moved)
 
-                            if (
-                                not moved
-                                or any(s.crossed_breakpoint for s in moved)
-                            ):
+                            if not moved or any(s.crossed_breakpoint for s in moved):
                                 next_queue[phrase].append(
                                     ActiveMatch(
                                         phrase=phrase,
@@ -575,16 +536,14 @@ class SurfaceTextExtractor:
                             continue
 
                         else:
-
                             stayed = []
                             moved = []
 
                             for state in current_queue.pop(phrase):
-
                                 if state.crossed_breakpoint:
                                     # Legacy behavior:
-                                    # once a breakpoint has been crossed, an existing phrase
-                                    # cannot continue matching.
+                                    # once a breakpoint has been crossed,
+                                    # an existing phrase cannot continue matching.
                                     stayed.append(state)
 
                                 elif option in state.remaining:
@@ -632,8 +591,7 @@ class SurfaceTextExtractor:
                 previous is None
                 or match.penalty < previous.penalty
                 or (
-                    match.penalty == previous.penalty
-                    and match.budget > previous.budget
+                    match.penalty == previous.penalty and match.budget > previous.budget
                 )
             ):
                 best[key] = match
@@ -654,10 +612,7 @@ class SurfaceTextExtractor:
 
         for match in matches:
             token_text = " ".join(
-                token.text
-                for token in tokens[
-                    match.start_word: match.end_word + 1
-                ]
+                token.text for token in tokens[match.start_word : match.end_word + 1]
             )
 
             score = (
@@ -689,7 +644,6 @@ class SurfaceTextExtractor:
         results = []
 
         for match, score in scored_matches:
-
             # Preserve legacy behaviour:
             # ignore corrected phrases whose edit distance is non-zero.
             if abs(score - match.penalty) > 1e-9:
@@ -707,7 +661,7 @@ class SurfaceTextExtractor:
             results.append(
                 {
                     "index": [start, end],
-                    "surface_text": normalized_text[start:end + 1],
+                    "surface_text": normalized_text[start : end + 1],
                     "corrected_text": match.phrase,
                     "score": -score,
                     "entities": entities,
@@ -757,19 +711,14 @@ class SurfaceTextExtractor:
         done_indices: set[tuple[str, int, int]] = set()
 
         BREAKPOINT_PENALTY = 1.5
-        MAX_LENGTH_BUDGET = 3.0
 
         for index, token in enumerate(tokens):
-
             #
             # Breakpoint handling (legacy behaviour)
             #
             if index in breakpoints_next_word_indices:
-
                 for phrase, states in current_queue.items():
-
                     for state in states:
-
                         key = (
                             phrase,
                             state.start_word,
@@ -777,10 +726,7 @@ class SurfaceTextExtractor:
                         )
 
                         if key not in done_indices:
-
-                            completed_matches.append(
-                                self._clone_match(state)
-                            )
+                            completed_matches.append(self._clone_match(state))
 
                             done_indices.add(key)
 
@@ -806,21 +752,16 @@ class SurfaceTextExtractor:
             # Expire old matches exactly like alternate_extract().
             #
             for phrase in list(current_queue.keys()):
-
                 survivors = []
 
                 for state in current_queue[phrase]:
-
                     state.budget -= self._penalize(index - state.end_word)
 
                     if state.budget <= 0:
-
                         key = (phrase, state.start_word, state.end_word)
 
                         if key not in done_indices:
-                            completed_matches.append(
-                                self._clone_match(state)
-                            )
+                            completed_matches.append(self._clone_match(state))
 
                             done_indices.add(key)
 
@@ -839,15 +780,11 @@ class SurfaceTextExtractor:
         # Flush remaining queue.
         #
         for phrase, states in current_queue.items():
-
             for state in states:
-
                 key = (phrase, state.start_word, state.end_word)
 
                 if key not in done_indices:
-                    completed_matches.append(
-                        self._clone_match(state)
-                    )
+                    completed_matches.append(self._clone_match(state))
 
                     done_indices.add(key)
 

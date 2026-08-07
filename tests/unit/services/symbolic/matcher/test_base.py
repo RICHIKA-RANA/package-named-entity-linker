@@ -9,10 +9,7 @@ def test_create_dictionary_entry(word_matcher):
 def test_duplicate_entry(word_matcher):
     word_matcher.create_dictionary_entry("hello")
 
-    assert (
-        word_matcher.create_dictionary_entry("hello")
-        is False
-    )
+    assert word_matcher.create_dictionary_entry("hello") is False
 
     assert word_matcher.frequency("hello") == 2
 
@@ -42,10 +39,7 @@ def test_no_match(word_matcher):
 def test_longest_word_length(word_matcher):
     word_matcher.create_dictionary_entry("international")
 
-    assert (
-        word_matcher.longest_word_length
-        == len("international")
-    )
+    assert word_matcher.longest_word_length == len("international")
 
 
 def test_base_matcher_type(word_matcher):

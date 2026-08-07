@@ -1,4 +1,5 @@
 from talkingdb.models.rule.regex import RegexModel
+
 from talkingdb_nel.services.symbolic.regex import RegexController
 
 
@@ -22,9 +23,7 @@ def test_no_match():
 def test_phone():
     controller = build_controller()
 
-    results = controller.process(
-        "Call me on 9876543210 tomorrow."
-    )
+    results = controller.process("Call me on 9876543210 tomorrow.")
 
     assert len(results) == 1
     assert results[0]["surfaceText"] == "9876543210"
@@ -34,9 +33,7 @@ def test_phone():
 def test_email():
     controller = build_controller()
 
-    results = controller.process(
-        "Mail john@test.com today."
-    )
+    results = controller.process("Mail john@test.com today.")
 
     assert len(results) == 1
     assert results[0]["surfaceText"] == "john@test.com"
@@ -46,9 +43,7 @@ def test_email():
 def test_multiple_matches():
     controller = build_controller()
 
-    results = controller.process(
-        "1111111111 2222222222"
-    )
+    results = controller.process("1111111111 2222222222")
 
     assert len(results) == 2
 
