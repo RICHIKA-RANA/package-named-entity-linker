@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  verify:
+    name: Build, Lint, Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry
+        run: |
+          pip install poetry
+
+      - name: Configure Poetry
+        run: |
+          poetry config virtualenvs.create true
+
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction --no-ansi
+
+      - name: Run format check
+        run: |
+          poetry run ruff format . --check
+
+      - name: Run lint checks
+        run: |
+          poetry run ruff check .
+
+      - name: Run tests
+        env:
+          NO_COLOR: "1"
+          FORCE_COLOR: "0"
+        shell: bash
+        run: |
+          set -o pipefail
+          poetry run pytest 2>&1 | tee test-output.txt
+
+      - name: Generate coverage
+        run: |
+          poetry run pytest \
+            --cov=talkingdb_nel \
+            --cov-report=term-missing \
+            --cov-report=html
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: htmlcov/
+
+      - name: Create PR comment
+        if: always() && github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          {
+            echo "# ✅ CI Report"
+            echo
+            echo "Automated checks completed."
+            echo
+            echo "## Test Output"
+            echo
+            echo '```text'
+            cat test-output.txt
+            echo '```'
+          } > pr-comment.md
+
+      - name: Post PR comment
+        if: always() && github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: ci-report
+          path: pr-comment.md
