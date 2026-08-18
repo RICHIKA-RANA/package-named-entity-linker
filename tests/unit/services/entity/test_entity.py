@@ -153,6 +153,77 @@ def test_create_fact(monkeypatch):
     assert called["since"] == 2025
 
 
+def test_suggestion_parts_tuple():
+    assert entity._suggestion_parts(("apple", (3, 1))) == ("apple", 1)
+
+
+def test_resolve_entities_deduplicates_by_entity_id(monkeypatch):
+    monkeypatch.setattr(
+        entity.entity_model,
+        "get_entities_by_surface_text",
+        lambda text: [
+            {"id": "Q1", "label": "Apple", "surface_texts": ["Apple"]},
+            {"id": "Q1", "label": "Apple", "surface_texts": ["Apple"]},
+        ],
+    )
+
+    resolved = entity._resolve_entities([("apple", (1, 0))])
+
+    assert resolved == [
+        {"_id": "Q1", "label": "Apple", "surface_text": "apple"},
+    ]
+
+
+def test_resolve_entities_no_match(monkeypatch):
+    monkeypatch.setattr(
+        entity.entity_model,
+        "get_entities_by_surface_text",
+        lambda text: [],
+    )
+
+    assert entity._resolve_entities([("apple", (1, 0))]) == []
+
+
+def test_get_surface_texts_attaches_entity_id_and_drops_unresolved(monkeypatch):
+    monkeypatch.setattr(
+        entity.surface_text_extractor,
+        "extract",
+        lambda *args, **kwargs: [
+            {
+                "index": [0, 4],
+                "surface_text": "apple",
+                "corrected_text": "apple",
+                "score": 0,
+                "entities": [("apple", (1, 0))],
+            },
+            {
+                "index": [10, 15],
+                "surface_text": "mango",
+                "corrected_text": "mango",
+                "score": 0,
+                "entities": [("mango", (1, 0))],
+            },
+        ],
+    )
+
+    monkeypatch.setattr(
+        entity.entity_model,
+        "get_entities_by_surface_text",
+        lambda text: (
+            [{"id": "Q1", "label": "Apple", "surface_texts": ["apple"]}]
+            if text == "apple"
+            else []
+        ),
+    )
+
+    result = entity.get_surface_texts("apple mango", word_correction=False)
+
+    assert len(result["UniversalEntities"]) == 1
+    assert result["UniversalEntities"][0]["entities"] == [
+        {"_id": "Q1", "label": "Apple", "surface_text": "apple"},
+    ]
+
+
 def test_create_regex(monkeypatch):
     called = []
 

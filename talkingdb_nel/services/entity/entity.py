@@ -49,7 +49,6 @@ def add_surface_text(entity_id: str, surface_text: str):
     index_entity(
         {
             "_id": entity_id,
-            "surface_text": [surface_text],
             "surface_texts": [surface_text],
         }
     )
@@ -73,6 +72,43 @@ def create_fact(
     return {"success": True}
 
 
+def _suggestion_parts(suggestion):
+    if isinstance(suggestion, tuple):
+        text, (_, distance) = suggestion
+        return text, distance
+
+    return suggestion.term, suggestion.distance
+
+
+def _resolve_entities(suggestions):
+    """
+    Resolve raw matcher suggestions (surface text + edit distance) to the
+    entity `_id`(s) they were trained under.
+    """
+
+    resolved = []
+    seen_ids = set()
+
+    for suggestion in suggestions:
+        text, _ = _suggestion_parts(suggestion)
+
+        for entity in entity_model.get_entities_by_surface_text(text):
+            if entity["id"] in seen_ids:
+                continue
+
+            seen_ids.add(entity["id"])
+
+            resolved.append(
+                {
+                    "_id": entity["id"],
+                    "label": entity["label"],
+                    "surface_text": text,
+                }
+            )
+
+    return resolved
+
+
 def create_regex(entity_id: str, regex: str):
     regex_model.add_rule(
         entity_id,
@@ -92,6 +128,9 @@ def get_surface_texts(
         [],
         word_correction=word_correction,
     )
+
+    for entity in universal_entities:
+        entity["entities"] = _resolve_entities(entity["entities"])
 
     universal_entities = [entity for entity in universal_entities if entity["entities"]]
 
@@ -126,7 +165,7 @@ def get_surface_texts(
     seen = set()
 
     for chunk in lemmatized:
-        start = chunk["index"][0]
+        start, end = chunk["index"]
         text = " ".join(chunk["lemmatized_tokens"])
 
         additional = phrase_matcher.get_suggestions(
@@ -134,25 +173,30 @@ def get_surface_texts(
             max_edit_distance=1,
         )
 
-        offset = start
+        for suggestion in additional:
+            candidate, distance = _suggestion_parts(suggestion)
 
-        for entity in additional:
-            index = (
-                offset,
-                offset + len(entity[0]),
-            )
+            seen_key = (start, end, candidate)
 
-            if index in seen:
+            if seen_key in seen:
+                continue
+
+            entities = _resolve_entities([suggestion])
+
+            if not entities:
                 continue
 
             universal_entities.append(
                 {
-                    "index": index,
-                    "surface_texts": [entity],
+                    "index": [start, end],
+                    "surface_text": message_text[start : end + 1],
+                    "corrected_text": candidate,
+                    "score": -distance,
+                    "entities": entities,
                 }
             )
 
-            seen.add(index)
+            seen.add(seen_key)
 
     return {
         "UniversalEntities": universal_entities,
