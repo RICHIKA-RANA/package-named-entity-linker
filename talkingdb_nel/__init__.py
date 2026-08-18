@@ -1,6 +1,6 @@
+import tomllib
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-import tomllib
 
 
 def _get_version() -> str:
