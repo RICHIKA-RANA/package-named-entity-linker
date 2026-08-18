@@ -32,7 +32,7 @@ class WordMatcher(BaseMatcher):
         Supported formats
 
         {
-            "surface_text": [
+            "surface_texts": [
                 "United States",
                 "USA"
             ]
@@ -41,7 +41,7 @@ class WordMatcher(BaseMatcher):
         or
 
         {
-            "surface_text": [
+            "surface_texts": [
                 {
                     "surface_text": "United States"
                 },
@@ -56,7 +56,7 @@ class WordMatcher(BaseMatcher):
 
         for entity in entities:
             surface_texts = entity.get(
-                "surface_text",
+                "surface_texts",
                 [],
             )
 

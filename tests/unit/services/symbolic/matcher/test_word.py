@@ -1,7 +1,7 @@
 def test_load(word_matcher):
     entities = [
         {
-            "surface_text": [
+            "surface_texts": [
                 "United States",
                 "USA",
             ]
@@ -19,7 +19,7 @@ def test_load(word_matcher):
 def test_load_dict_surface_text(word_matcher):
     entities = [
         {
-            "surface_text": [
+            "surface_texts": [
                 {"surface_text": "OpenAI"},
                 {"surface_text": "ChatGPT"},
             ]
