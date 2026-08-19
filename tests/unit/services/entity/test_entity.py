@@ -8,20 +8,26 @@ from talkingdb_nel.services.entity import entity
 def make_bundle(**overrides):
     defaults = {
         "namespace": "test",
+        "dictionary": SimpleNamespace(clear=lambda: None),
         "entity_model": SimpleNamespace(
             has_entity=lambda entity_id: False,
             get_entity=lambda entity_id: None,
             add_entity=lambda **kwargs: None,
             update_surface_texts=lambda *args, **kwargs: None,
+            update_label=lambda *args, **kwargs: None,
+            remove_entity=lambda entity_id: None,
             add_fact=lambda **kwargs: "fact-1",
             get_fact=lambda fact_id: None,
+            remove_fact=lambda fact_id: None,
             iter_facts=lambda: iter([]),
             iter_entities=lambda: iter([]),
             get_entities_by_surface_text=lambda text: [],
             save=lambda conn: None,
         ),
         "regex_model": SimpleNamespace(
+            rules={},
             add_rule=lambda *args, **kwargs: None,
+            remove_pattern=lambda *args, **kwargs: None,
             save=lambda conn: None,
         ),
         "word_matcher": SimpleNamespace(load=lambda docs: None),
@@ -448,3 +454,272 @@ def test_create_regex_missing_entity():
 
     with pytest.raises(entity.EntityNotFoundError):
         entity.create_regex(bundle, "Date", r"\d{4}")
+
+
+def test_update_entity_label_only():
+    updated = {}
+
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(
+            has_entity=lambda entity_id: True,
+            update_label=lambda entity_id, label: updated.update(
+                {"id": entity_id, "label": label}
+            ),
+            get_entity=lambda entity_id: {
+                "id": entity_id,
+                "label": updated.get("label", "Old Label"),
+                "surface_texts": ["apple"],
+            },
+        )
+    )
+
+    result = entity.update_entity(bundle, "Q1", label="New Label")
+
+    assert updated == {"id": "Q1", "label": "New Label"}
+    assert result == {
+        "entity_id": "Q1",
+        "label": "New Label",
+        "surface_texts": ["apple"],
+    }
+
+
+def test_update_entity_missing():
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(has_entity=lambda entity_id: False)
+    )
+
+    with pytest.raises(entity.EntityNotFoundError):
+        entity.update_entity(bundle, "Q1", label="X")
+
+
+def test_update_entity_surface_texts_triggers_reindex():
+    cleared = []
+    word_loaded = []
+
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(
+            has_entity=lambda entity_id: True,
+            update_surface_texts=lambda *args, **kwargs: None,
+            get_entity=lambda entity_id: {
+                "id": entity_id,
+                "label": "Apple",
+                "surface_texts": ["apple", "apple inc"],
+            },
+            iter_entities=lambda: iter(
+                [
+                    {
+                        "id": "Q1",
+                        "label": "Apple",
+                        "surface_texts": ["apple", "apple inc"],
+                    }
+                ]
+            ),
+        ),
+        dictionary=SimpleNamespace(clear=lambda: cleared.append(True)),
+        word_matcher=SimpleNamespace(
+            load=lambda docs: word_loaded.extend(docs),
+            longest_word_length=5,
+        ),
+    )
+
+    entity.update_entity(bundle, "Q1", surface_texts=["apple", "apple inc"])
+
+    assert cleared == [True]
+    assert word_loaded == [{"entity_id": "Q1", "surface_texts": ["apple", "apple inc"]}]
+
+
+def test_delete_entity_success_triggers_reindex():
+    removed = []
+    cleared = []
+    word_loaded = []
+
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(
+            has_entity=lambda entity_id: True,
+            remove_entity=lambda entity_id: removed.append(entity_id),
+            iter_entities=lambda: iter(
+                [{"id": "Q2", "label": "Remaining", "surface_texts": ["remaining"]}]
+            ),
+        ),
+        dictionary=SimpleNamespace(clear=lambda: cleared.append(True)),
+        word_matcher=SimpleNamespace(
+            load=lambda docs: word_loaded.extend(docs),
+            longest_word_length=5,
+        ),
+    )
+
+    entity.delete_entity(bundle, "Q1")
+
+    assert removed == ["Q1"]
+    assert cleared == [True]
+    assert word_loaded == [{"entity_id": "Q2", "surface_texts": ["remaining"]}]
+
+
+def test_delete_entity_missing():
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(has_entity=lambda entity_id: False)
+    )
+
+    with pytest.raises(entity.EntityNotFoundError):
+        entity.delete_entity(bundle, "Q1")
+
+
+def test_update_fact_predicate_only():
+    removed = []
+    added = {}
+
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(
+            get_fact=lambda fact_id: {
+                "id": fact_id,
+                "source": "A",
+                "target": "B",
+                "predicate": "KNOWS",
+                "since": 2020,
+            },
+            remove_fact=lambda fact_id: removed.append(fact_id),
+            add_fact=lambda **kwargs: added.update(kwargs) or kwargs.get("fact_id"),
+        )
+    )
+
+    result = entity.update_fact(bundle, "fact-1", predicate="WORKS_WITH")
+
+    assert removed == ["fact-1"]
+    assert added == {
+        "source": "A",
+        "target": "B",
+        "predicate": "WORKS_WITH",
+        "fact_id": "fact-1",
+        "since": 2020,
+    }
+    assert result == {
+        "id": "fact-1",
+        "source": "A",
+        "target": "B",
+        "predicate": "WORKS_WITH",
+        "since": 2020,
+    }
+
+
+def test_update_fact_missing():
+    bundle = make_bundle(entity_model=SimpleNamespace(get_fact=lambda fact_id: None))
+
+    with pytest.raises(entity.FactNotFoundError):
+        entity.update_fact(bundle, "fact-1", predicate="X")
+
+
+def test_delete_fact_success():
+    removed = []
+
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(
+            get_fact=lambda fact_id: {
+                "id": fact_id,
+                "source": "A",
+                "target": "B",
+                "predicate": "KNOWS",
+            },
+            remove_fact=lambda fact_id: removed.append(fact_id),
+        )
+    )
+
+    entity.delete_fact(bundle, "fact-1")
+
+    assert removed == ["fact-1"]
+
+
+def test_delete_fact_missing():
+    bundle = make_bundle(entity_model=SimpleNamespace(get_fact=lambda fact_id: None))
+
+    with pytest.raises(entity.FactNotFoundError):
+        entity.delete_fact(bundle, "fact-1")
+
+
+def test_list_regex_rules():
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(has_entity=lambda entity_id: True),
+        regex_model=SimpleNamespace(
+            rules={
+                "Date": [
+                    SimpleNamespace(pattern=r"\d{4}"),
+                    SimpleNamespace(pattern=r"\d{2}/\d{2}"),
+                ]
+            }
+        ),
+    )
+
+    assert entity.list_regex_rules(bundle, "Date") == [r"\d{4}", r"\d{2}/\d{2}"]
+
+
+def test_list_regex_rules_missing_entity():
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(has_entity=lambda entity_id: False)
+    )
+
+    with pytest.raises(entity.EntityNotFoundError):
+        entity.list_regex_rules(bundle, "Date")
+
+
+def test_list_regex_rules_entity_with_no_rules():
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(has_entity=lambda entity_id: True),
+        regex_model=SimpleNamespace(rules={}),
+    )
+
+    assert entity.list_regex_rules(bundle, "Date") == []
+
+
+def test_update_regex_rule_success():
+    removed = []
+    added = []
+
+    bundle = make_bundle(
+        regex_model=SimpleNamespace(
+            remove_pattern=lambda rule_name, pattern: removed.append(
+                (rule_name, pattern)
+            ),
+            add_rule=lambda rule_name, pattern: added.append((rule_name, pattern)),
+        )
+    )
+
+    result = entity.update_regex_rule(bundle, "Date", r"\d{4}", r"\d{2}")
+
+    assert removed == [("Date", r"\d{4}")]
+    assert added == [("Date", r"\d{2}")]
+    assert result == {"entity_id": "Date", "regex": r"\d{2}"}
+
+
+def test_update_regex_rule_missing_pattern():
+    def raise_key_error(rule_name, pattern):
+        raise KeyError(rule_name)
+
+    bundle = make_bundle(regex_model=SimpleNamespace(remove_pattern=raise_key_error))
+
+    with pytest.raises(entity.RegexRuleNotFoundError):
+        entity.update_regex_rule(bundle, "Date", "old", "new")
+
+
+def test_delete_regex_rule_success():
+    removed = []
+
+    bundle = make_bundle(
+        regex_model=SimpleNamespace(
+            remove_pattern=lambda rule_name, pattern: removed.append(
+                (rule_name, pattern)
+            )
+        )
+    )
+
+    entity.delete_regex_rule(bundle, "Date", r"\d{4}")
+
+    assert removed == [("Date", r"\d{4}")]
+
+
+def test_delete_regex_rule_missing():
+    def raise_value_error(rule_name, pattern):
+        raise ValueError(pattern)
+
+    bundle = make_bundle(regex_model=SimpleNamespace(remove_pattern=raise_value_error))
+
+    with pytest.raises(entity.RegexRuleNotFoundError):
+        entity.delete_regex_rule(bundle, "Date", "nonexistent")

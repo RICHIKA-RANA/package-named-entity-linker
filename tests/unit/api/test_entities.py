@@ -7,6 +7,7 @@ from talkingdb_nel.api.dependencies import get_namespace_bundle
 from talkingdb_nel.services.entity.entity import (
     EntityAlreadyExistsError,
     EntityNotFoundError,
+    RegexRuleNotFoundError,
     SurfaceTextAlreadyExistsError,
 )
 
@@ -98,6 +99,66 @@ def test_get_entity_not_found(client, monkeypatch):
     assert response.status_code == 404
 
 
+def test_update_entity_success(client, monkeypatch):
+    monkeypatch.setattr(
+        entities,
+        "update_entity",
+        lambda bundle, **kwargs: {
+            "entity_id": kwargs["entity_id"],
+            "label": kwargs["label"],
+            "surface_texts": ["Apple"],
+        },
+    )
+
+    response = client.patch(
+        f"/api/namespaces/{NS}/entities/Q1",
+        json={"label": "New Label"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["label"] == "New Label"
+
+
+def test_update_entity_not_found(client, monkeypatch):
+    def raise_not_found(bundle, **kwargs):
+        raise EntityNotFoundError(kwargs["entity_id"])
+
+    monkeypatch.setattr(entities, "update_entity", raise_not_found)
+
+    response = client.patch(
+        f"/api/namespaces/{NS}/entities/Q1",
+        json={"label": "New Label"},
+    )
+
+    assert response.status_code == 404
+
+
+def test_delete_entity_success(client, monkeypatch):
+    called = []
+
+    monkeypatch.setattr(
+        entities,
+        "delete_entity",
+        lambda bundle, **kwargs: called.append(kwargs["entity_id"]),
+    )
+
+    response = client.delete(f"/api/namespaces/{NS}/entities/Q1")
+
+    assert response.status_code == 204
+    assert called == ["Q1"]
+
+
+def test_delete_entity_not_found(client, monkeypatch):
+    def raise_not_found(bundle, **kwargs):
+        raise EntityNotFoundError(kwargs["entity_id"])
+
+    monkeypatch.setattr(entities, "delete_entity", raise_not_found)
+
+    response = client.delete(f"/api/namespaces/{NS}/entities/Q1")
+
+    assert response.status_code == 404
+
+
 def test_add_surface_text_success(client, monkeypatch):
     monkeypatch.setattr(
         entities,
@@ -172,6 +233,99 @@ def test_add_regex_rule_entity_not_found(client, monkeypatch):
     monkeypatch.setattr(entities, "create_regex", raise_not_found)
 
     response = client.post(
+        f"/api/namespaces/{NS}/entities/Date/regex-rules",
+        json={"regex": r"\d{4}"},
+    )
+
+    assert response.status_code == 404
+
+
+def test_list_regex_rules_success(client, monkeypatch):
+    monkeypatch.setattr(
+        entities,
+        "list_regex_rules",
+        lambda bundle, **kwargs: [r"\d{4}", r"\d{2}/\d{2}"],
+    )
+
+    response = client.get(f"/api/namespaces/{NS}/entities/Date/regex-rules")
+
+    assert response.status_code == 200
+    assert response.json() == [r"\d{4}", r"\d{2}/\d{2}"]
+
+
+def test_list_regex_rules_entity_not_found(client, monkeypatch):
+    def raise_not_found(bundle, **kwargs):
+        raise EntityNotFoundError(kwargs["entity_id"])
+
+    monkeypatch.setattr(entities, "list_regex_rules", raise_not_found)
+
+    response = client.get(f"/api/namespaces/{NS}/entities/Date/regex-rules")
+
+    assert response.status_code == 404
+
+
+def test_update_regex_rule_success(client, monkeypatch):
+    monkeypatch.setattr(
+        entities,
+        "update_regex_rule",
+        lambda bundle, **kwargs: {
+            "entity_id": kwargs["entity_id"],
+            "regex": kwargs["new_pattern"],
+        },
+    )
+
+    response = client.patch(
+        f"/api/namespaces/{NS}/entities/Date/regex-rules",
+        json={"old_regex": r"\d{4}", "new_regex": r"\d{2}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"entity_id": "Date", "regex": r"\d{2}"}
+
+
+def test_update_regex_rule_not_found(client, monkeypatch):
+    def raise_not_found(bundle, **kwargs):
+        raise RegexRuleNotFoundError(kwargs["old_pattern"])
+
+    monkeypatch.setattr(entities, "update_regex_rule", raise_not_found)
+
+    response = client.patch(
+        f"/api/namespaces/{NS}/entities/Date/regex-rules",
+        json={"old_regex": r"\d{4}", "new_regex": r"\d{2}"},
+    )
+
+    assert response.status_code == 404
+
+
+def test_delete_regex_rule_success(client, monkeypatch):
+    called = []
+
+    monkeypatch.setattr(
+        entities,
+        "delete_regex_rule",
+        lambda bundle, **kwargs: called.append(
+            (kwargs["entity_id"], kwargs["pattern"])
+        ),
+    )
+
+    response = client.request(
+        "DELETE",
+        f"/api/namespaces/{NS}/entities/Date/regex-rules",
+        json={"regex": r"\d{4}"},
+    )
+
+    assert response.status_code == 204
+    assert called == [("Date", r"\d{4}")]
+
+
+def test_delete_regex_rule_not_found(client, monkeypatch):
+    def raise_not_found(bundle, **kwargs):
+        raise RegexRuleNotFoundError(kwargs["pattern"])
+
+    monkeypatch.setattr(entities, "delete_regex_rule", raise_not_found)
+
+    response = client.request(
+        "DELETE",
         f"/api/namespaces/{NS}/entities/Date/regex-rules",
         json={"regex": r"\d{4}"},
     )

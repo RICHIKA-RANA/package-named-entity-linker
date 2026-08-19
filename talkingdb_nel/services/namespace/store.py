@@ -85,6 +85,30 @@ def get_namespace(conn: sqlite3.Connection, name: str) -> dict | None:
     return dict(row)
 
 
+def update_namespace(
+    conn: sqlite3.Connection,
+    name: str,
+    description: str | None,
+) -> dict:
+    if not namespace_exists(conn, name):
+        raise NamespaceNotFoundError(name)
+
+    conn.execute(
+        "UPDATE namespaces SET description = ? WHERE name = ?",
+        (description, name),
+    )
+
+    return get_namespace(conn, name)
+
+
+def delete_namespace(conn: sqlite3.Connection, name: str) -> None:
+    if not namespace_exists(conn, name):
+        raise NamespaceNotFoundError(name)
+
+    conn.execute("DELETE FROM commits WHERE namespace = ?", (name,))
+    conn.execute("DELETE FROM namespaces WHERE name = ?", (name,))
+
+
 def list_namespaces(conn: sqlite3.Connection) -> list[dict]:
     rows = conn.execute(
         "SELECT name, description, created_at FROM namespaces ORDER BY created_at"

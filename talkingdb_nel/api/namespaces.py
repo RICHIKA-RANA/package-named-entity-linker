@@ -9,6 +9,7 @@ from talkingdb_nel.services.namespace import store
 from talkingdb_nel.services.namespace.registry import NamespaceBundle
 from talkingdb_nel.services.namespace.versioning import (
     commit_namespace,
+    purge_namespace_data,
     rollback_namespace,
 )
 
@@ -29,6 +30,10 @@ class NamespaceResponse(BaseModel):
     name: str = Field(..., description="Unique identifier for the namespace.")
     description: Optional[str] = Field(None, description="Human-readable description.")
     created_at: str = Field(..., description="ISO-8601 creation timestamp (UTC).")
+
+
+class NamespaceUpdateRequest(BaseModel):
+    description: Optional[str] = Field(None, description="New description.")
 
 
 class CommitCreateRequest(BaseModel):
@@ -110,6 +115,41 @@ def get_namespace_by_name(namespace: str) -> NamespaceResponse:
         )
 
     return result
+
+
+@router.patch(
+    "/{namespace}",
+    response_model=NamespaceResponse,
+    summary="Update a namespace",
+    description="Updates a namespace's description. 404 if it doesn't exist.",
+)
+def update_namespace_by_name(
+    namespace: str,
+    payload: NamespaceUpdateRequest,
+) -> NamespaceResponse:
+    try:
+        return store.update_namespace(entity_conn, namespace, payload.description)
+    except store.NamespaceNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Namespace '{exc}' not found",
+        ) from exc
+
+
+@router.delete(
+    "/{namespace}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a namespace",
+    description=(
+        "Permanently deletes a namespace and all its entities, facts, "
+        "regex rules, fuzzy-match dictionary, and commit history. "
+        "This cannot be undone."
+    ),
+)
+def delete_namespace_by_name(
+    bundle: NamespaceBundle = Depends(get_namespace_bundle),
+) -> None:
+    purge_namespace_data(bundle)
 
 
 @router.post(
