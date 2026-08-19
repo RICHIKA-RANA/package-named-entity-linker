@@ -1,3 +1,4 @@
+from talkingdb_nel.services.bulk import parse_bulk_rows
 from talkingdb_nel.services.namespace.registry import NamespaceBundle
 from talkingdb_nel.services.symbolic.notag import NoTag
 
@@ -53,6 +54,42 @@ def create_entity(
         "label": resolved_label,
         "surface_texts": surface_texts,
     }
+
+
+def bulk_create_entities(bundle: NamespaceBundle, format: str, content: str) -> dict:
+    rows = parse_bulk_rows(format, content)
+
+    created = 0
+    errors = []
+
+    for index, row in enumerate(rows):
+        try:
+            entity_id = row["entity_id"]
+            label = row.get("label") or None
+            surface_texts_raw = row.get("surface_texts") or []
+
+            if isinstance(surface_texts_raw, str):
+                surface_texts = [
+                    text.strip()
+                    for text in surface_texts_raw.split("|")
+                    if text.strip()
+                ]
+            else:
+                surface_texts = list(surface_texts_raw)
+
+            create_entity(
+                bundle,
+                entity_id=entity_id,
+                label=label,
+                surface_texts=surface_texts,
+            )
+            created += 1
+        except EntityAlreadyExistsError as exc:
+            errors.append({"row": index, "error": f"Entity '{exc}' already exists"})
+        except (KeyError, TypeError, ValueError) as exc:
+            errors.append({"row": index, "error": str(exc)})
+
+    return {"created": created, "errors": errors}
 
 
 def get_entity(bundle: NamespaceBundle, entity_id: str) -> dict | None:

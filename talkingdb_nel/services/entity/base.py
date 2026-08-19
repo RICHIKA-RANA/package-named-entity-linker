@@ -11,6 +11,7 @@ from talkingdb.models.entity.entity import EntityModel
 from talkingdb.models.rule.regex import RegexModel
 
 from talkingdb_nel.services.namespace.store import init_db as init_namespace_db
+from talkingdb_nel.services.testsuite.store import init_db as init_testsuite_db
 
 dictionary_conn = sqlite_conn(DICTIONARY_DB).__enter__()
 entity_conn = sqlite_conn(ENTITY_DB).__enter__()
@@ -22,3 +23,4 @@ DictionaryModel.init_db(dictionary_conn)
 EntityModel.init_db(entity_conn)
 RegexModel.init_db(regex_conn)
 init_namespace_db(entity_conn)
+init_testsuite_db(entity_conn)

@@ -57,6 +57,22 @@ def test_create_entity_conflict(client, monkeypatch):
     assert response.status_code == 409
 
 
+def test_bulk_upload_entities(client, monkeypatch):
+    monkeypatch.setattr(
+        entities,
+        "bulk_create_entities",
+        lambda bundle, format, content: {"created": 3, "errors": []},
+    )
+
+    response = client.post(
+        f"/api/namespaces/{NS}/entities/bulk",
+        json={"format": "csv", "content": "entity_id\nQ1\n"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"created": 3, "errors": []}
+
+
 def test_list_entities(client, monkeypatch):
     monkeypatch.setattr(
         entities,

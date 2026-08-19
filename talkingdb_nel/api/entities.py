@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -10,6 +10,7 @@ from talkingdb_nel.services.entity.entity import (
     RegexRuleNotFoundError,
     SurfaceTextAlreadyExistsError,
     add_surface_text,
+    bulk_create_entities,
     create_entity,
     create_regex,
     delete_entity,
@@ -70,6 +71,18 @@ class RegexRuleResponse(BaseModel):
     regex: str = Field(..., description="Regular expression pattern.")
 
 
+class BulkUploadRequest(BaseModel):
+    format: str = Field(..., description="'csv' or 'json'.")
+    content: str = Field(..., description="Raw file content.")
+
+
+class BulkUploadResponse(BaseModel):
+    created: int = Field(..., description="Number of entities created.")
+    errors: List[Dict[str, Any]] = Field(
+        default_factory=list, description="Per-row errors, if any."
+    )
+
+
 class RegexRuleDeleteRequest(BaseModel):
     regex: str = Field(..., description="Exact pattern to delete.")
 
@@ -105,6 +118,24 @@ def create_new_entity(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Entity '{exc}' already exists",
         ) from exc
+
+
+@router.post(
+    "/bulk",
+    response_model=BulkUploadResponse,
+    summary="Bulk-create entities",
+    description=(
+        "Creates many entities from CSV or JSON content (columns/fields: "
+        "entity_id, label, surface_texts - pipe-separated in CSV, an "
+        "array in JSON). Per-row errors (e.g. duplicate entity_id) are "
+        "collected rather than failing the whole upload."
+    ),
+)
+def bulk_upload_entities(
+    payload: BulkUploadRequest,
+    bundle: NamespaceBundle = Depends(get_namespace_bundle),
+) -> BulkUploadResponse:
+    return bulk_create_entities(bundle, payload.format, payload.content)
 
 
 @router.get(

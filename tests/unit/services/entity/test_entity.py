@@ -102,6 +102,78 @@ def test_create_entity_defaults_label_to_entity_id():
     }
 
 
+def test_bulk_create_entities_json():
+    created_ids = []
+
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(
+            has_entity=lambda entity_id: False,
+            add_entity=lambda entity_id, label, surface_texts: created_ids.append(
+                entity_id
+            ),
+            save=lambda conn: None,
+        )
+    )
+
+    content = (
+        '[{"entity_id": "Q1", "label": "Apple", "surface_texts": ["Apple"]},'
+        ' {"entity_id": "Q2", "surface_texts": ["Google"]}]'
+    )
+
+    result = entity.bulk_create_entities(bundle, "json", content)
+
+    assert result == {"created": 2, "errors": []}
+    assert created_ids == ["Q1", "Q2"]
+
+
+def test_bulk_create_entities_csv_pipe_separated_surface_texts():
+    captured = []
+
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(
+            has_entity=lambda entity_id: False,
+            add_entity=lambda entity_id, label, surface_texts: captured.append(
+                (entity_id, label, surface_texts)
+            ),
+            save=lambda conn: None,
+        )
+    )
+
+    content = "entity_id,label,surface_texts\nQ1,Apple,Apple|Apple Inc\n"
+
+    result = entity.bulk_create_entities(bundle, "csv", content)
+
+    assert result == {"created": 1, "errors": []}
+    assert captured == [("Q1", "Apple", ["Apple", "Apple Inc"])]
+
+
+def test_bulk_create_entities_collects_per_row_errors():
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(has_entity=lambda entity_id: True)
+    )
+
+    content = '[{"entity_id": "Q1"}]'
+
+    result = entity.bulk_create_entities(bundle, "json", content)
+
+    assert result["created"] == 0
+    assert len(result["errors"]) == 1
+    assert result["errors"][0]["row"] == 0
+
+
+def test_bulk_create_entities_missing_entity_id_collected_as_error():
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(has_entity=lambda entity_id: False)
+    )
+
+    content = '[{"label": "Apple"}]'
+
+    result = entity.bulk_create_entities(bundle, "json", content)
+
+    assert result["created"] == 0
+    assert result["errors"] == [{"row": 0, "error": "'entity_id'"}]
+
+
 def test_create_entity_already_exists():
     bundle = make_bundle(
         entity_model=SimpleNamespace(has_entity=lambda entity_id: True)
