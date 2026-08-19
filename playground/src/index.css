@@ -230,3 +230,39 @@ mark.highlight-entity {
 mark.highlight-regex {
   background: rgba(217, 119, 6, 0.25);
 }
+
+.commit-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.commit-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.commit-actions button {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: var(--border);
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+.commit-detail {
+  margin-top: 8px;
+}
+
+.commit-snapshot {
+  font-size: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  overflow-x: auto;
+  max-height: 240px;
+  overflow-y: auto;
+}

@@ -3,6 +3,7 @@ import NamespaceList from './pages/NamespaceList'
 import NamespaceLayout from './pages/NamespaceLayout'
 import NamespaceTrain from './pages/NamespaceTrain'
 import NamespaceTest from './pages/NamespaceTest'
+import NamespaceHistory from './pages/NamespaceHistory'
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
               <Route index element={<Navigate to="train" replace />} />
               <Route path="train" element={<NamespaceTrain />} />
               <Route path="test" element={<NamespaceTest />} />
+              <Route path="history" element={<NamespaceHistory />} />
             </Route>
           </Routes>
         </main>

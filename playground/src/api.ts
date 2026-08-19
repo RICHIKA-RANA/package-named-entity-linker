@@ -51,6 +51,20 @@ export interface ExtractionResult {
   no_tag_entities: NoTagEntity[]
 }
 
+export interface Commit {
+  commit_id: string
+  parent_commit_id: string | null
+  message: string
+  created_at: string
+}
+
+export interface CommitDetail extends Commit {
+  snapshot: {
+    entities: { nodes: unknown[]; edges: unknown[] }
+    regex_rules: Record<string, string[]>
+  }
+}
+
 export class ApiError extends Error {
   status: number
 
@@ -158,6 +172,27 @@ export function createFact(
     target,
     attributes: {},
   })
+}
+
+export function commitNamespace(namespace: string, message: string): Promise<Commit> {
+  return postJson<Commit>(`/api/namespaces/${encodeURIComponent(namespace)}/commits`, { message })
+}
+
+export function listCommits(namespace: string): Promise<Commit[]> {
+  return request<Commit[]>(`/api/namespaces/${encodeURIComponent(namespace)}/commits`)
+}
+
+export function getCommit(namespace: string, commitId: string): Promise<CommitDetail> {
+  return request<CommitDetail>(
+    `/api/namespaces/${encodeURIComponent(namespace)}/commits/${encodeURIComponent(commitId)}`,
+  )
+}
+
+export function rollbackNamespace(namespace: string, commitId: string): Promise<Commit> {
+  return postJson<Commit>(
+    `/api/namespaces/${encodeURIComponent(namespace)}/commits/${encodeURIComponent(commitId)}/rollback`,
+    {},
+  )
 }
 
 export function runExtraction(
