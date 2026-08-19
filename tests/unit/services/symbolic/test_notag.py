@@ -86,3 +86,27 @@ class TestNoTag:
         result = NoTag.get_no_tags(text, [])
 
         assert [x["surface_text"] for x in result] == [e.lower() for e in expected]
+
+    def test_strips_trailing_and_leading_punctuation(self):
+        text = "Hello Mayank, how are you?"
+
+        result = NoTag.get_no_tags(text, [])
+
+        assert result == [
+            {"index": [0, 4], "surface_text": "hello"},
+            {"index": [6, 11], "surface_text": "mayank"},
+            {"index": [14, 16], "surface_text": "how"},
+            {"index": [18, 20], "surface_text": "are"},
+            {"index": [22, 24], "surface_text": "you"},
+        ]
+
+        for entry in result:
+            start, end = entry["index"]
+            assert text[start : end + 1].lower() == entry["surface_text"]
+
+    def test_punctuation_only_token_is_dropped(self):
+        text = "wait... really?!"
+
+        result = NoTag.get_no_tags(text, [])
+
+        assert [x["surface_text"] for x in result] == ["wait", "really"]

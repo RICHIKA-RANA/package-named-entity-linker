@@ -105,6 +105,7 @@ class NoTag:
         Only retain the primary lexical tokens.
         """
         output = []
+        strip_chars = "".join(cls.skip_list)
 
         for span in spans:
             base = span["index"][0]
@@ -117,16 +118,28 @@ class NoTag:
                 if length != (end - start + 1):
                     continue
 
-                if not cls.check(token):
+                # Tokenizer.tokenize(include_subtokens=False) doesn't split
+                # attached punctuation off the primary token (e.g. "myank,"),
+                # so strip it here and adjust the span accordingly.
+                stripped = token.strip(strip_chars)
+
+                if not stripped:
                     continue
 
-                if not any(ch.isalnum() for ch in token):
+                leading = len(token) - len(token.lstrip(strip_chars))
+                token_start = start + leading
+                token_end = token_start + len(stripped) - 1
+
+                if not cls.check(stripped):
+                    continue
+
+                if not any(ch.isalnum() for ch in stripped):
                     continue
 
                 output.append(
                     {
-                        "index": [base + start, base + end],
-                        "surface_text": token.lower(),
+                        "index": [base + token_start, base + token_end],
+                        "surface_text": stripped.lower(),
                     }
                 )
 

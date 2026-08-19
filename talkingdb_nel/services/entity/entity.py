@@ -266,6 +266,17 @@ def get_surface_texts(
             universal_entities.append(match)
             seen.add(seen_key)
 
+    matched_ranges = [tuple(entity["index"]) for entity in universal_entities]
+
+    remaining_no_tags = [
+        tag
+        for tag in remaining_no_tags
+        if not any(
+            tag["index"][0] <= end and start <= tag["index"][1]
+            for start, end in matched_ranges
+        )
+    ]
+
     return {
         "UniversalEntities": universal_entities,
         "RegexEntities": filtered_regex,
