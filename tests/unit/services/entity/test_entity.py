@@ -1,49 +1,59 @@
+from types import SimpleNamespace
+
 import pytest
 
 from talkingdb_nel.services.entity import entity
 
 
-@pytest.fixture(autouse=True)
-def reset_mocks(monkeypatch):
-    monkeypatch.setattr(entity.entity_model, "add_entity", lambda **kwargs: None)
-    monkeypatch.setattr(entity.entity_model, "has_entity", lambda entity_id: False)
-    monkeypatch.setattr(entity.entity_model, "get_entity", lambda entity_id: None)
-    monkeypatch.setattr(
-        entity.entity_model, "update_surface_texts", lambda *args, **kwargs: None
-    )
-    monkeypatch.setattr(entity.entity_model, "add_fact", lambda **kwargs: "fact-1")
+def make_bundle(**overrides):
+    defaults = {
+        "namespace": "test",
+        "entity_model": SimpleNamespace(
+            has_entity=lambda entity_id: False,
+            get_entity=lambda entity_id: None,
+            add_entity=lambda **kwargs: None,
+            update_surface_texts=lambda *args, **kwargs: None,
+            add_fact=lambda **kwargs: "fact-1",
+            get_fact=lambda fact_id: None,
+            iter_facts=lambda: iter([]),
+            iter_entities=lambda: iter([]),
+            get_entities_by_surface_text=lambda text: [],
+            save=lambda conn: None,
+        ),
+        "regex_model": SimpleNamespace(
+            add_rule=lambda *args, **kwargs: None,
+            save=lambda conn: None,
+        ),
+        "word_matcher": SimpleNamespace(load=lambda docs: None),
+        "phrase_matcher": SimpleNamespace(
+            load=lambda docs: None,
+            get_suggestions=lambda text, max_edit_distance=None: [],
+        ),
+        "lemmatizer": SimpleNamespace(lemmatize=lambda no_tags: (no_tags, [])),
+        "regex_controller": SimpleNamespace(process=lambda text: []),
+        "surface_text_extractor": SimpleNamespace(extract=lambda *args, **kwargs: []),
+        "entity_conn": None,
+        "regex_conn": None,
+    }
 
-    monkeypatch.setattr(
-        entity.word_matcher,
-        "load",
-        lambda *args, **kwargs: None,
-    )
-    monkeypatch.setattr(
-        entity.phrase_matcher,
-        "load",
-        lambda *args, **kwargs: None,
-    )
+    for key, value in overrides.items():
+        if key in defaults and isinstance(value, SimpleNamespace):
+            merged = vars(defaults[key]).copy()
+            merged.update(vars(value))
+            defaults[key] = SimpleNamespace(**merged)
+        else:
+            defaults[key] = value
 
-    monkeypatch.setattr(entity.regex_controller, "process", lambda text: [])
-    monkeypatch.setattr(
-        entity.surface_text_extractor, "extract", lambda *args, **kwargs: []
-    )
+    return SimpleNamespace(**defaults)
 
 
-def test_index_entity(monkeypatch):
+def test_index_entity():
     word_loaded = []
     phrase_loaded = []
 
-    monkeypatch.setattr(
-        entity.word_matcher,
-        "load",
-        lambda docs: word_loaded.extend(docs),
-    )
-
-    monkeypatch.setattr(
-        entity.phrase_matcher,
-        "load",
-        lambda docs: phrase_loaded.extend(docs),
+    bundle = make_bundle(
+        word_matcher=SimpleNamespace(load=lambda docs: word_loaded.extend(docs)),
+        phrase_matcher=SimpleNamespace(load=lambda docs: phrase_loaded.extend(docs)),
     )
 
     e = {
@@ -51,14 +61,17 @@ def test_index_entity(monkeypatch):
         "surface_texts": ["Apple", "Apple Inc"],
     }
 
-    entity.index_entity(e)
+    entity.index_entity(bundle, e)
 
     assert word_loaded == [e]
     assert phrase_loaded == [e]
 
 
 def test_create_entity_success():
+    bundle = make_bundle()
+
     result = entity.create_entity(
+        bundle,
         "Q1",
         label="Apple",
         surface_texts=["Apple", "Apple Inc"],
@@ -72,7 +85,9 @@ def test_create_entity_success():
 
 
 def test_create_entity_defaults_label_to_entity_id():
-    result = entity.create_entity("Q1")
+    bundle = make_bundle()
+
+    result = entity.create_entity(bundle, "Q1")
 
     assert result == {
         "entity_id": "Q1",
@@ -81,25 +96,27 @@ def test_create_entity_defaults_label_to_entity_id():
     }
 
 
-def test_create_entity_already_exists(monkeypatch):
-    monkeypatch.setattr(entity.entity_model, "has_entity", lambda entity_id: True)
-
-    with pytest.raises(entity.EntityAlreadyExistsError):
-        entity.create_entity("Q1")
-
-
-def test_get_entity_found(monkeypatch):
-    monkeypatch.setattr(
-        entity.entity_model,
-        "get_entity",
-        lambda entity_id: {
-            "id": entity_id,
-            "label": "Apple",
-            "surface_texts": ["Apple"],
-        },
+def test_create_entity_already_exists():
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(has_entity=lambda entity_id: True)
     )
 
-    assert entity.get_entity("Q1") == {
+    with pytest.raises(entity.EntityAlreadyExistsError):
+        entity.create_entity(bundle, "Q1")
+
+
+def test_get_entity_found():
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(
+            get_entity=lambda entity_id: {
+                "id": entity_id,
+                "label": "Apple",
+                "surface_texts": ["Apple"],
+            }
+        )
+    )
+
+    assert entity.get_entity(bundle, "Q1") == {
         "entity_id": "Q1",
         "label": "Apple",
         "surface_texts": ["Apple"],
@@ -107,54 +124,45 @@ def test_get_entity_found(monkeypatch):
 
 
 def test_get_entity_missing():
-    assert entity.get_entity("Q1") is None
+    bundle = make_bundle()
+
+    assert entity.get_entity(bundle, "Q1") is None
 
 
-def test_list_entities(monkeypatch):
-    monkeypatch.setattr(
-        entity.entity_model,
-        "iter_entities",
-        lambda: iter(
-            [
-                {"id": "Q1", "label": "Apple", "surface_texts": ["Apple"]},
-                {"id": "Q2", "label": "Google", "surface_texts": ["Google"]},
-            ]
-        ),
+def test_list_entities():
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(
+            iter_entities=lambda: iter(
+                [
+                    {"id": "Q1", "label": "Apple", "surface_texts": ["Apple"]},
+                    {"id": "Q2", "label": "Google", "surface_texts": ["Google"]},
+                ]
+            )
+        )
     )
 
-    assert entity.list_entities() == [
+    assert entity.list_entities(bundle) == [
         {"entity_id": "Q1", "label": "Apple", "surface_texts": ["Apple"]},
         {"entity_id": "Q2", "label": "Google", "surface_texts": ["Google"]},
     ]
 
 
-def test_add_surface_text_success(monkeypatch):
-    monkeypatch.setattr(
-        entity.entity_model,
-        "get_entity",
-        lambda _: {
-            "label": "Apple",
-            "surface_texts": ["Apple"],
-        },
-    )
-
+def test_add_surface_text_success():
     updated = {}
 
-    monkeypatch.setattr(
-        entity.entity_model,
-        "update_surface_texts",
-        lambda entity_id, texts: updated.update(
-            {
-                "id": entity_id,
-                "texts": texts,
-            }
-        ),
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(
+            get_entity=lambda _: {
+                "label": "Apple",
+                "surface_texts": ["Apple"],
+            },
+            update_surface_texts=lambda entity_id, texts: updated.update(
+                {"id": entity_id, "texts": texts}
+            ),
+        )
     )
 
-    result = entity.add_surface_text(
-        "Q1",
-        "Apple Inc",
-    )
+    result = entity.add_surface_text(bundle, "Q1", "Apple Inc")
 
     assert result == {
         "entity_id": "Q1",
@@ -162,52 +170,38 @@ def test_add_surface_text_success(monkeypatch):
         "surface_texts": ["Apple", "Apple Inc"],
     }
 
-    assert updated["texts"] == [
-        "Apple",
-        "Apple Inc",
-    ]
+    assert updated["texts"] == ["Apple", "Apple Inc"]
 
 
-def test_add_surface_text_missing_entity(monkeypatch):
-    monkeypatch.setattr(
-        entity.entity_model,
-        "get_entity",
-        lambda _: None,
-    )
+def test_add_surface_text_missing_entity():
+    bundle = make_bundle(entity_model=SimpleNamespace(get_entity=lambda _: None))
 
     with pytest.raises(entity.EntityNotFoundError):
-        entity.add_surface_text("Q1", "Apple")
+        entity.add_surface_text(bundle, "Q1", "Apple")
 
 
-def test_add_surface_text_duplicate(monkeypatch):
-    monkeypatch.setattr(
-        entity.entity_model,
-        "get_entity",
-        lambda _: {
-            "label": "Apple",
-            "surface_texts": ["Apple"],
-        },
+def test_add_surface_text_duplicate():
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(
+            get_entity=lambda _: {"label": "Apple", "surface_texts": ["Apple"]}
+        )
     )
 
     with pytest.raises(entity.SurfaceTextAlreadyExistsError):
-        entity.add_surface_text("Q1", "Apple")
+        entity.add_surface_text(bundle, "Q1", "Apple")
 
 
-def test_create_fact(monkeypatch):
+def test_create_fact():
     called = {}
 
-    monkeypatch.setattr(
-        entity.entity_model,
-        "add_fact",
-        lambda **kwargs: called.update(kwargs) or "fact-42",
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(
+            add_fact=lambda **kwargs: called.update(kwargs) or "fact-42",
+            save=lambda conn: None,
+        )
     )
 
-    result = entity.create_fact(
-        "A",
-        "KNOWS",
-        "B",
-        since=2025,
-    )
+    result = entity.create_fact(bundle, "A", "KNOWS", "B", since=2025)
 
     assert result == {
         "id": "fact-42",
@@ -223,19 +217,19 @@ def test_create_fact(monkeypatch):
     assert called["since"] == 2025
 
 
-def test_get_fact_found(monkeypatch):
-    monkeypatch.setattr(
-        entity.entity_model,
-        "get_fact",
-        lambda fact_id: {
-            "id": fact_id,
-            "source": "A",
-            "target": "B",
-            "predicate": "KNOWS",
-        },
+def test_get_fact_found():
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(
+            get_fact=lambda fact_id: {
+                "id": fact_id,
+                "source": "A",
+                "target": "B",
+                "predicate": "KNOWS",
+            }
+        )
     )
 
-    assert entity.get_fact("fact-1") == {
+    assert entity.get_fact(bundle, "fact-1") == {
         "id": "fact-1",
         "source": "A",
         "target": "B",
@@ -243,25 +237,23 @@ def test_get_fact_found(monkeypatch):
     }
 
 
-def test_get_fact_missing(monkeypatch):
-    monkeypatch.setattr(entity.entity_model, "get_fact", lambda fact_id: None)
+def test_get_fact_missing():
+    bundle = make_bundle()
 
-    assert entity.get_fact("fact-1") is None
+    assert entity.get_fact(bundle, "fact-1") is None
 
 
-def test_list_facts(monkeypatch):
-    monkeypatch.setattr(
-        entity.entity_model,
-        "iter_facts",
-        lambda: iter(
-            [
-                {"id": "fact-1", "source": "A", "target": "B", "predicate": "KNOWS"},
-            ]
-        ),
+def test_list_facts():
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(
+            iter_facts=lambda: iter(
+                [{"id": "fact-1", "source": "A", "target": "B", "predicate": "KNOWS"}]
+            )
+        )
     )
 
-    assert entity.list_facts() == [
-        {"id": "fact-1", "source": "A", "target": "B", "predicate": "KNOWS"},
+    assert entity.list_facts(bundle) == [
+        {"id": "fact-1", "source": "A", "target": "B", "predicate": "KNOWS"}
     ]
 
 
@@ -269,66 +261,59 @@ def test_suggestion_parts_tuple():
     assert entity._suggestion_parts(("apple", (3, 1))) == ("apple", 1)
 
 
-def test_resolve_entities_deduplicates_by_entity_id(monkeypatch):
-    monkeypatch.setattr(
-        entity.entity_model,
-        "get_entities_by_surface_text",
-        lambda text: [
-            {"id": "Q1", "label": "Apple", "surface_texts": ["Apple"]},
-            {"id": "Q1", "label": "Apple", "surface_texts": ["Apple"]},
-        ],
+def test_resolve_entities_deduplicates_by_entity_id():
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(
+            get_entities_by_surface_text=lambda text: [
+                {"id": "Q1", "label": "Apple", "surface_texts": ["Apple"]},
+                {"id": "Q1", "label": "Apple", "surface_texts": ["Apple"]},
+            ]
+        )
     )
 
-    resolved = entity._resolve_entities([("apple", (1, 0))])
+    resolved = entity._resolve_entities(bundle, [("apple", (1, 0))])
 
     assert resolved == [
         {"entity_id": "Q1", "label": "Apple", "surface_text": "apple"},
     ]
 
 
-def test_resolve_entities_no_match(monkeypatch):
-    monkeypatch.setattr(
-        entity.entity_model,
-        "get_entities_by_surface_text",
-        lambda text: [],
-    )
+def test_resolve_entities_no_match():
+    bundle = make_bundle()
 
-    assert entity._resolve_entities([("apple", (1, 0))]) == []
+    assert entity._resolve_entities(bundle, [("apple", (1, 0))]) == []
 
 
-def test_get_surface_texts_attaches_entity_id_and_drops_unresolved(monkeypatch):
-    monkeypatch.setattr(
-        entity.surface_text_extractor,
-        "extract",
-        lambda *args, **kwargs: [
-            {
-                "index": [0, 4],
-                "surface_text": "apple",
-                "corrected_text": "apple",
-                "score": 0,
-                "entities": [("apple", (1, 0))],
-            },
-            {
-                "index": [10, 15],
-                "surface_text": "mango",
-                "corrected_text": "mango",
-                "score": 0,
-                "entities": [("mango", (1, 0))],
-            },
-        ],
-    )
-
-    monkeypatch.setattr(
-        entity.entity_model,
-        "get_entities_by_surface_text",
-        lambda text: (
-            [{"id": "Q1", "label": "Apple", "surface_texts": ["apple"]}]
-            if text == "apple"
-            else []
+def test_get_surface_texts_attaches_entity_id_and_drops_unresolved():
+    bundle = make_bundle(
+        surface_text_extractor=SimpleNamespace(
+            extract=lambda *args, **kwargs: [
+                {
+                    "index": [0, 4],
+                    "surface_text": "apple",
+                    "corrected_text": "apple",
+                    "score": 0,
+                    "entities": [("apple", (1, 0))],
+                },
+                {
+                    "index": [10, 15],
+                    "surface_text": "mango",
+                    "corrected_text": "mango",
+                    "score": 0,
+                    "entities": [("mango", (1, 0))],
+                },
+            ]
+        ),
+        entity_model=SimpleNamespace(
+            get_entities_by_surface_text=lambda text: (
+                [{"id": "Q1", "label": "Apple", "surface_texts": ["apple"]}]
+                if text == "apple"
+                else []
+            ),
         ),
     )
 
-    result = entity.get_surface_texts("apple mango", word_correction=False)
+    result = entity.get_surface_texts(bundle, "apple mango", word_correction=False)
 
     assert len(result["universal_entities"]) == 1
     assert result["universal_entities"][0]["entities"] == [
@@ -366,21 +351,19 @@ def test_iter_no_tag_windows_stops_at_non_whitespace_gap():
     assert (7, 10, "gpta") in windows
 
 
-def test_find_fuzzy_matches(monkeypatch):
-    monkeypatch.setattr(
-        entity.phrase_matcher,
-        "get_suggestions",
-        lambda text, max_edit_distance=None: (
-            [("mayank", (3, 1))] if text == "myank" else []
+def test_find_fuzzy_matches():
+    bundle = make_bundle(
+        phrase_matcher=SimpleNamespace(
+            get_suggestions=lambda text, max_edit_distance=None: (
+                [("mayank", (3, 1))] if text == "myank" else []
+            )
         ),
-    )
-    monkeypatch.setattr(
-        entity.entity_model,
-        "get_entities_by_surface_text",
-        lambda text: (
-            [{"id": "Q1", "label": "Mayank", "surface_texts": ["mayank"]}]
-            if text == "mayank"
-            else []
+        entity_model=SimpleNamespace(
+            get_entities_by_surface_text=lambda text: (
+                [{"id": "Q1", "label": "Mayank", "surface_texts": ["mayank"]}]
+                if text == "mayank"
+                else []
+            ),
         ),
     )
 
@@ -391,7 +374,7 @@ def test_find_fuzzy_matches(monkeypatch):
         {"index": [9, 12]},
     ]
 
-    matches = list(entity._find_fuzzy_matches(message_text, no_tags))
+    matches = list(entity._find_fuzzy_matches(bundle, message_text, no_tags))
 
     assert matches == [
         {
@@ -406,35 +389,30 @@ def test_find_fuzzy_matches(monkeypatch):
     ]
 
 
-def test_get_surface_texts_word_correction_flag_gates_fuzzy_matches(monkeypatch):
-    monkeypatch.setattr(
-        entity.lemmatizer,
-        "lemmatize",
-        lambda no_tags: (no_tags, []),
-    )
-    monkeypatch.setattr(
-        entity.phrase_matcher,
-        "get_suggestions",
-        lambda text, max_edit_distance=None: (
-            [("mayank", (3, 1))]
-            if text == "myank" and (max_edit_distance or 0) >= 1
-            else []
+def test_get_surface_texts_word_correction_flag_gates_fuzzy_matches():
+    bundle = make_bundle(
+        phrase_matcher=SimpleNamespace(
+            get_suggestions=lambda text, max_edit_distance=None: (
+                [("mayank", (3, 1))]
+                if text == "myank" and (max_edit_distance or 0) >= 1
+                else []
+            )
         ),
-    )
-    monkeypatch.setattr(
-        entity.entity_model,
-        "get_entities_by_surface_text",
-        lambda text: (
-            [{"id": "Q1", "label": "Mayank", "surface_texts": ["mayank"]}]
-            if text == "mayank"
-            else []
+        entity_model=SimpleNamespace(
+            get_entities_by_surface_text=lambda text: (
+                [{"id": "Q1", "label": "Mayank", "surface_texts": ["mayank"]}]
+                if text == "mayank"
+                else []
+            ),
         ),
     )
 
-    result_off = entity.get_surface_texts("myank is here", word_correction=False)
+    result_off = entity.get_surface_texts(
+        bundle, "myank is here", word_correction=False
+    )
     assert result_off["universal_entities"] == []
 
-    result_on = entity.get_surface_texts("myank is here", word_correction=True)
+    result_on = entity.get_surface_texts(bundle, "myank is here", word_correction=True)
     assert len(result_on["universal_entities"]) == 1
     assert result_on["universal_entities"][0]["corrected_text"] == "mayank"
     assert result_on["universal_entities"][0]["entities"] == [
@@ -446,28 +424,27 @@ def test_get_surface_texts_word_correction_flag_gates_fuzzy_matches(monkeypatch)
     assert no_tag_texts == ["is", "here"]
 
 
-def test_create_regex_success(monkeypatch):
+def test_create_regex_success():
     called = []
 
-    monkeypatch.setattr(entity.entity_model, "has_entity", lambda entity_id: True)
-    monkeypatch.setattr(
-        entity.regex_model,
-        "add_rule",
-        lambda entity_id, regex: called.append((entity_id, regex)),
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(has_entity=lambda entity_id: True),
+        regex_model=SimpleNamespace(
+            add_rule=lambda entity_id, regex: called.append((entity_id, regex)),
+            save=lambda conn: None,
+        ),
     )
-    monkeypatch.setattr(entity.regex_model, "save", lambda conn: None)
 
-    result = entity.create_regex(
-        "Date",
-        r"\d{4}",
-    )
+    result = entity.create_regex(bundle, "Date", r"\d{4}")
 
     assert result == {"entity_id": "Date", "regex": r"\d{4}"}
     assert called == [("Date", r"\d{4}")]
 
 
-def test_create_regex_missing_entity(monkeypatch):
-    monkeypatch.setattr(entity.entity_model, "has_entity", lambda entity_id: False)
+def test_create_regex_missing_entity():
+    bundle = make_bundle(
+        entity_model=SimpleNamespace(has_entity=lambda entity_id: False)
+    )
 
     with pytest.raises(entity.EntityNotFoundError):
-        entity.create_regex("Date", r"\d{4}")
+        entity.create_regex(bundle, "Date", r"\d{4}")
