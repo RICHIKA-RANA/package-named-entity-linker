@@ -38,6 +38,14 @@ TalkingDB Named Entity Linker (NEL) identifies named entities in text and resolv
     <img src="docs/images/architecture.png" width="90%" alt="Architecture">
 </p>
 
+## API
+
+<p align="center">
+    <img src="docs/images/api-resources.svg" width="90%" alt="API resources: Entities and Facts write training data into the shared SQLite knowledge base; Extraction reads from it to resolve incoming text to entity_id.">
+</p>
+
+Three resource groups - **Entities**, **Facts**, **Extraction** - see [`CHANGELOG.md`](CHANGELOG.md) for the full endpoint reference, or `/docs` on a running instance for interactive Swagger docs.
+
 ## Features
 
 - Phrase matching, including fuzzy typo correction (insertions, deletions, substitutions)
