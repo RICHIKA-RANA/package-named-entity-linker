@@ -1,6 +1,6 @@
 [project]
 name = "package-named-entity-linker"
-version = "6.0.0"
+version = "6.1.0"
 description = "Links detected named entities in text to their corresponding canonical entities in a knowledge base for accurate identification and disambiguation."
 authors = [
     { name = "immkg", email = "mayank.g@smarter.codes" }
