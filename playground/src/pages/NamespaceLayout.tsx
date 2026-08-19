@@ -38,9 +38,7 @@ function NamespaceLayoutInner({ name }: { name: string }) {
             <NavLink to="train">Train</NavLink>
             <NavLink to="test">Test</NavLink>
             <NavLink to="history">History</NavLink>
-            <button disabled title="Coming soon">
-              Graph
-            </button>
+            <NavLink to="graph">Graph</NavLink>
           </nav>
 
           <div className="tab-content">

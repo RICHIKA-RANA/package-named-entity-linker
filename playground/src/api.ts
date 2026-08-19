@@ -65,6 +65,27 @@ export interface CommitDetail extends Commit {
   }
 }
 
+export interface GraphNode {
+  id: string
+  label?: string
+  surface_texts?: string[]
+}
+
+export interface GraphEdge {
+  source: string
+  target: string
+  key: string
+  predicate: string
+  [key: string]: unknown
+}
+
+export interface Graph {
+  directed: boolean
+  multigraph: boolean
+  nodes: GraphNode[]
+  edges: GraphEdge[]
+}
+
 export class ApiError extends Error {
   status: number
 
@@ -193,6 +214,10 @@ export function rollbackNamespace(namespace: string, commitId: string): Promise<
     `/api/namespaces/${encodeURIComponent(namespace)}/commits/${encodeURIComponent(commitId)}/rollback`,
     {},
   )
+}
+
+export function getGraph(namespace: string): Promise<Graph> {
+  return request<Graph>(`/api/namespaces/${encodeURIComponent(namespace)}/graph`)
 }
 
 export function runExtraction(
