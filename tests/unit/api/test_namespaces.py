@@ -42,7 +42,7 @@ def test_create_namespace_success(client, monkeypatch):
     )
 
     response = client.post(
-        "/namespaces",
+        "/api/namespaces",
         json={"name": NS, "description": "a test namespace"},
     )
 
@@ -56,7 +56,7 @@ def test_create_namespace_conflict(client, monkeypatch):
 
     monkeypatch.setattr(namespaces.store, "create_namespace", raise_conflict)
 
-    response = client.post("/namespaces", json={"name": NS})
+    response = client.post("/api/namespaces", json={"name": NS})
 
     assert response.status_code == 409
 
@@ -70,7 +70,7 @@ def test_list_namespaces(client, monkeypatch):
         ],
     )
 
-    response = client.get("/namespaces")
+    response = client.get("/api/namespaces")
 
     assert response.status_code == 200
     assert response.json()[0]["name"] == NS
@@ -79,7 +79,7 @@ def test_list_namespaces(client, monkeypatch):
 def test_get_namespace_not_found(client, monkeypatch):
     monkeypatch.setattr(namespaces.store, "get_namespace", lambda conn, name: None)
 
-    response = client.get(f"/namespaces/{NS}")
+    response = client.get(f"/api/namespaces/{NS}")
 
     assert response.status_code == 404
 
@@ -96,7 +96,7 @@ def test_create_commit(client, monkeypatch):
         },
     )
 
-    response = client.post(f"/namespaces/{NS}/commits", json={"message": "initial"})
+    response = client.post(f"/api/namespaces/{NS}/commits", json={"message": "initial"})
 
     assert response.status_code == 201
     assert response.json()["message"] == "initial"
@@ -116,7 +116,7 @@ def test_list_commits(client, monkeypatch):
         ],
     )
 
-    response = client.get(f"/namespaces/{NS}/commits")
+    response = client.get(f"/api/namespaces/{NS}/commits")
 
     assert response.status_code == 200
     assert response.json()[0]["commit_id"] == "c1"
@@ -127,7 +127,7 @@ def test_get_commit_not_found(client, monkeypatch):
         namespaces.store, "get_commit", lambda conn, namespace, commit_id: None
     )
 
-    response = client.get(f"/namespaces/{NS}/commits/nonexistent")
+    response = client.get(f"/api/namespaces/{NS}/commits/nonexistent")
 
     assert response.status_code == 404
 
@@ -144,7 +144,7 @@ def test_rollback_success(client, monkeypatch):
         },
     )
 
-    response = client.post(f"/namespaces/{NS}/commits/c1/rollback")
+    response = client.post(f"/api/namespaces/{NS}/commits/c1/rollback")
 
     assert response.status_code == 201
     assert response.json()["message"] == "Rollback to c1"
@@ -156,13 +156,13 @@ def test_rollback_commit_not_found(client, monkeypatch):
 
     monkeypatch.setattr(namespaces, "rollback_namespace", raise_not_found)
 
-    response = client.post(f"/namespaces/{NS}/commits/nonexistent/rollback")
+    response = client.post(f"/api/namespaces/{NS}/commits/nonexistent/rollback")
 
     assert response.status_code == 404
 
 
 def test_get_graph(client):
-    response = client.get(f"/namespaces/{NS}/graph")
+    response = client.get(f"/api/namespaces/{NS}/graph")
 
     assert response.status_code == 200
     assert response.json() == {

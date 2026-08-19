@@ -33,7 +33,7 @@ def test_create_entity_success(client, monkeypatch):
     )
 
     response = client.post(
-        f"/namespaces/{NS}/entities",
+        f"/api/namespaces/{NS}/entities",
         json={"entity_id": "Q1", "label": "Apple", "surface_texts": ["Apple"]},
     )
 
@@ -51,7 +51,7 @@ def test_create_entity_conflict(client, monkeypatch):
 
     monkeypatch.setattr(entities, "create_entity", raise_conflict)
 
-    response = client.post(f"/namespaces/{NS}/entities", json={"entity_id": "Q1"})
+    response = client.post(f"/api/namespaces/{NS}/entities", json={"entity_id": "Q1"})
 
     assert response.status_code == 409
 
@@ -65,7 +65,7 @@ def test_list_entities(client, monkeypatch):
         ],
     )
 
-    response = client.get(f"/namespaces/{NS}/entities")
+    response = client.get(f"/api/namespaces/{NS}/entities")
 
     assert response.status_code == 200
     assert response.json() == [
@@ -84,7 +84,7 @@ def test_get_entity_success(client, monkeypatch):
         },
     )
 
-    response = client.get(f"/namespaces/{NS}/entities/Q1")
+    response = client.get(f"/api/namespaces/{NS}/entities/Q1")
 
     assert response.status_code == 200
     assert response.json()["entity_id"] == "Q1"
@@ -93,7 +93,7 @@ def test_get_entity_success(client, monkeypatch):
 def test_get_entity_not_found(client, monkeypatch):
     monkeypatch.setattr(entities, "get_entity", lambda bundle, entity_id: None)
 
-    response = client.get(f"/namespaces/{NS}/entities/Q1")
+    response = client.get(f"/api/namespaces/{NS}/entities/Q1")
 
     assert response.status_code == 404
 
@@ -110,7 +110,7 @@ def test_add_surface_text_success(client, monkeypatch):
     )
 
     response = client.post(
-        f"/namespaces/{NS}/entities/Q1/surface-texts",
+        f"/api/namespaces/{NS}/entities/Q1/surface-texts",
         json={"surface_text": "Apple Inc"},
     )
 
@@ -125,7 +125,7 @@ def test_add_surface_text_entity_not_found(client, monkeypatch):
     monkeypatch.setattr(entities, "add_surface_text", raise_not_found)
 
     response = client.post(
-        f"/namespaces/{NS}/entities/Q1/surface-texts",
+        f"/api/namespaces/{NS}/entities/Q1/surface-texts",
         json={"surface_text": "Apple Inc"},
     )
 
@@ -139,7 +139,7 @@ def test_add_surface_text_duplicate(client, monkeypatch):
     monkeypatch.setattr(entities, "add_surface_text", raise_conflict)
 
     response = client.post(
-        f"/namespaces/{NS}/entities/Q1/surface-texts",
+        f"/api/namespaces/{NS}/entities/Q1/surface-texts",
         json={"surface_text": "Apple"},
     )
 
@@ -157,7 +157,7 @@ def test_add_regex_rule_success(client, monkeypatch):
     )
 
     response = client.post(
-        f"/namespaces/{NS}/entities/Date/regex-rules",
+        f"/api/namespaces/{NS}/entities/Date/regex-rules",
         json={"regex": r"\d{4}"},
     )
 
@@ -172,7 +172,7 @@ def test_add_regex_rule_entity_not_found(client, monkeypatch):
     monkeypatch.setattr(entities, "create_regex", raise_not_found)
 
     response = client.post(
-        f"/namespaces/{NS}/entities/Date/regex-rules",
+        f"/api/namespaces/{NS}/entities/Date/regex-rules",
         json={"regex": r"\d{4}"},
     )
 
