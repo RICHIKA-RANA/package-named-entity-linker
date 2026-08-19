@@ -123,6 +123,30 @@ function postJson<T>(path: string, body: unknown): Promise<T> {
   })
 }
 
+function patchJson<T>(path: string, body: unknown): Promise<T> {
+  return request<T>(path, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
+
+async function requestVoid(path: string, init?: RequestInit): Promise<void> {
+  const response = await fetch(path, init)
+
+  if (!response.ok) {
+    throw new ApiError(response.status, await safeDetail(response))
+  }
+}
+
+function deleteVoid(path: string, body?: unknown): Promise<void> {
+  return requestVoid(path, {
+    method: 'DELETE',
+    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+}
+
 export function listNamespaces(): Promise<Namespace[]> {
   return request<Namespace[]>('/api/namespaces')
 }
@@ -136,6 +160,14 @@ export function createNamespace(
 
 export function getNamespace(name: string): Promise<Namespace> {
   return request<Namespace>(`/api/namespaces/${encodeURIComponent(name)}`)
+}
+
+export function updateNamespace(name: string, description: string | null): Promise<Namespace> {
+  return patchJson<Namespace>(`/api/namespaces/${encodeURIComponent(name)}`, { description })
+}
+
+export function deleteNamespace(name: string): Promise<void> {
+  return deleteVoid(`/api/namespaces/${encodeURIComponent(name)}`)
 }
 
 export function listEntities(namespace: string): Promise<Entity[]> {
@@ -153,6 +185,68 @@ export function createEntity(
     label: label || null,
     surface_texts: surfaceTexts,
   })
+}
+
+export interface BulkUploadResult {
+  created: number
+  errors: { row: number; error: string }[]
+}
+
+export function updateEntity(
+  namespace: string,
+  entityId: string,
+  updates: { label?: string; surface_texts?: string[] },
+): Promise<Entity> {
+  return patchJson<Entity>(
+    `/api/namespaces/${encodeURIComponent(namespace)}/entities/${encodeURIComponent(entityId)}`,
+    updates,
+  )
+}
+
+export function deleteEntity(namespace: string, entityId: string): Promise<void> {
+  return deleteVoid(
+    `/api/namespaces/${encodeURIComponent(namespace)}/entities/${encodeURIComponent(entityId)}`,
+  )
+}
+
+export function bulkCreateEntities(
+  namespace: string,
+  format: 'csv' | 'json',
+  content: string,
+): Promise<BulkUploadResult> {
+  return postJson<BulkUploadResult>(
+    `/api/namespaces/${encodeURIComponent(namespace)}/entities/bulk`,
+    { format, content },
+  )
+}
+
+export function listRegexRules(namespace: string, entityId: string): Promise<string[]> {
+  return request<string[]>(
+    `/api/namespaces/${encodeURIComponent(namespace)}/entities/${encodeURIComponent(entityId)}/regex-rules`,
+  )
+}
+
+export function updateRegexRule(
+  namespace: string,
+  entityId: string,
+  oldRegex: string,
+  newRegex: string,
+): Promise<{ entity_id: string; regex: string }> {
+  return patchJson(
+    `/api/namespaces/${encodeURIComponent(namespace)}/entities/${encodeURIComponent(entityId)}/regex-rules`,
+    { old_regex: oldRegex, new_regex: newRegex },
+  )
+}
+
+export function deleteRegexRule(
+  namespace: string,
+  entityId: string,
+  regex: string,
+): Promise<void> {
+  return deleteVoid(
+    `/api/namespaces/${encodeURIComponent(namespace)}/entities/${encodeURIComponent(entityId)}/regex-rules`,
+    { regex },
+  )
 }
 
 export function addSurfaceText(
@@ -195,6 +289,23 @@ export function createFact(
   })
 }
 
+export function updateFact(
+  namespace: string,
+  factId: string,
+  updates: { predicate?: string; attributes?: Record<string, unknown> },
+): Promise<Fact> {
+  return patchJson<Fact>(
+    `/api/namespaces/${encodeURIComponent(namespace)}/facts/${encodeURIComponent(factId)}`,
+    updates,
+  )
+}
+
+export function deleteFact(namespace: string, factId: string): Promise<void> {
+  return deleteVoid(
+    `/api/namespaces/${encodeURIComponent(namespace)}/facts/${encodeURIComponent(factId)}`,
+  )
+}
+
 export function commitNamespace(namespace: string, message: string): Promise<Commit> {
   return postJson<Commit>(`/api/namespaces/${encodeURIComponent(namespace)}/commits`, { message })
 }
@@ -218,6 +329,127 @@ export function rollbackNamespace(namespace: string, commitId: string): Promise<
 
 export function getGraph(namespace: string): Promise<Graph> {
   return request<Graph>(`/api/namespaces/${encodeURIComponent(namespace)}/graph`)
+}
+
+export interface ExpectedPair {
+  surface_text: string
+  entity_id: string
+}
+
+export interface TestCase {
+  id: string
+  namespace: string
+  message_text: string
+  word_correction: boolean
+  expected: ExpectedPair[] | null
+  review_status: 'pending' | 'accepted' | 'rejected'
+  created_at: string
+}
+
+export interface TestRun {
+  id: string
+  namespace: string
+  created_at: string
+  triggering_commit_id: string | null
+}
+
+export interface TestRunResult {
+  id: string
+  run_id: string
+  test_case_id: string
+  actual: ExpectedPair[]
+  passed: boolean | null
+  status_label: 'pass' | 'regression' | 'fixed' | 'fail' | 'new' | 'needs_review'
+}
+
+export interface TestRunSummary {
+  run: TestRun
+  results: TestRunResult[]
+  accuracy: number | null
+  graded_count: number
+  passed_count: number
+  total_count: number
+}
+
+export function createTestCase(
+  namespace: string,
+  messageText: string,
+  wordCorrection: boolean,
+  expected?: ExpectedPair[],
+): Promise<TestCase> {
+  return postJson<TestCase>(`/api/namespaces/${encodeURIComponent(namespace)}/test-cases`, {
+    message_text: messageText,
+    word_correction: wordCorrection,
+    expected: expected ?? null,
+  })
+}
+
+export function bulkCreateTestCases(
+  namespace: string,
+  format: 'csv' | 'json',
+  content: string,
+): Promise<BulkUploadResult> {
+  return postJson<BulkUploadResult>(
+    `/api/namespaces/${encodeURIComponent(namespace)}/test-cases/bulk`,
+    { format, content },
+  )
+}
+
+export function listTestCases(namespace: string): Promise<TestCase[]> {
+  return request<TestCase[]>(`/api/namespaces/${encodeURIComponent(namespace)}/test-cases`)
+}
+
+export function updateTestCase(
+  namespace: string,
+  testCaseId: string,
+  updates: {
+    message_text?: string
+    word_correction?: boolean
+    expected?: ExpectedPair[] | null
+    review_status?: string
+  },
+): Promise<TestCase> {
+  return patchJson<TestCase>(
+    `/api/namespaces/${encodeURIComponent(namespace)}/test-cases/${encodeURIComponent(testCaseId)}`,
+    updates,
+  )
+}
+
+export function deleteTestCase(namespace: string, testCaseId: string): Promise<void> {
+  return deleteVoid(
+    `/api/namespaces/${encodeURIComponent(namespace)}/test-cases/${encodeURIComponent(testCaseId)}`,
+  )
+}
+
+export function acceptTestCase(namespace: string, testCaseId: string): Promise<TestCase> {
+  return postJson<TestCase>(
+    `/api/namespaces/${encodeURIComponent(namespace)}/test-cases/${encodeURIComponent(testCaseId)}/accept`,
+    {},
+  )
+}
+
+export function rejectTestCase(namespace: string, testCaseId: string): Promise<TestCase> {
+  return postJson<TestCase>(
+    `/api/namespaces/${encodeURIComponent(namespace)}/test-cases/${encodeURIComponent(testCaseId)}/reject`,
+    {},
+  )
+}
+
+export function createTestRun(namespace: string): Promise<TestRunSummary> {
+  return postJson<TestRunSummary>(
+    `/api/namespaces/${encodeURIComponent(namespace)}/test-runs`,
+    {},
+  )
+}
+
+export function listTestRuns(namespace: string): Promise<TestRun[]> {
+  return request<TestRun[]>(`/api/namespaces/${encodeURIComponent(namespace)}/test-runs`)
+}
+
+export function getTestRunResults(namespace: string, runId: string): Promise<TestRunResult[]> {
+  return request<TestRunResult[]>(
+    `/api/namespaces/${encodeURIComponent(namespace)}/test-runs/${encodeURIComponent(runId)}`,
+  )
 }
 
 export function runExtraction(

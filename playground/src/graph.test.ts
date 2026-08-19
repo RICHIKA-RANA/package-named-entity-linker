@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { toFlowElements } from './graph'
+import { toFlowElements, filterToNeighborhood } from './graph'
 import type { Graph } from './api'
 
 function makeGraph(overrides: Partial<Graph> = {}): Graph {
@@ -65,5 +65,30 @@ describe('toFlowElements', () => {
       { id: 'fact-1', source: 'mayank', target: 'acme', label: 'WORKS_AT' },
       { id: 'fact-2', source: 'mayank', target: 'acme', label: 'FOUNDED' },
     ])
+  })
+})
+
+describe('filterToNeighborhood', () => {
+  const graph = makeGraph({
+    nodes: [
+      { id: 'mayank', label: 'Mayank', surface_texts: [] },
+      { id: 'acme', label: 'Acme', surface_texts: [] },
+      { id: 'unrelated', label: 'Unrelated', surface_texts: [] },
+    ],
+    edges: [{ source: 'mayank', target: 'acme', key: 'fact-1', predicate: 'WORKS_AT' }],
+  })
+
+  it('keeps only the entity and its directly connected neighbors', () => {
+    const result = filterToNeighborhood(graph, 'mayank')
+
+    expect(result.nodes.map((n) => n.id).sort()).toEqual(['acme', 'mayank'])
+    expect(result.edges).toEqual(graph.edges)
+  })
+
+  it('keeps a node with no edges as an isolated single-node graph', () => {
+    const result = filterToNeighborhood(graph, 'unrelated')
+
+    expect(result.nodes.map((n) => n.id)).toEqual(['unrelated'])
+    expect(result.edges).toEqual([])
   })
 })

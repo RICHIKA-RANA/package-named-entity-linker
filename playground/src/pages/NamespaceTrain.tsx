@@ -1,18 +1,25 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { Trash2, Eye } from 'lucide-react'
 import {
   addRegexRule,
   addSurfaceText,
   createEntity,
   createFact,
+  deleteFact,
   listEntities,
   listFacts,
   type Entity,
   type Fact,
 } from '../api'
 import { useNamespaceContext } from './namespaceContext'
+import { useToast } from '../components/toastContext'
+import EntityCombobox from '../components/EntityCombobox'
+import ActionMenu from '../components/ActionMenu'
+import EntityDetailPanel from '../panels/EntityDetailPanel'
 
 export default function NamespaceTrain() {
   const { namespace } = useNamespaceContext()
+  const { showToast } = useToast()
 
   const [entities, setEntities] = useState<Entity[]>([])
   const [entitiesLoading, setEntitiesLoading] = useState(true)
@@ -21,6 +28,8 @@ export default function NamespaceTrain() {
   const [facts, setFacts] = useState<Fact[]>([])
   const [factsLoading, setFactsLoading] = useState(true)
   const [factsError, setFactsError] = useState<string | null>(null)
+
+  const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null)
 
   useEffect(() => {
     listEntities(namespace)
@@ -38,28 +47,64 @@ export default function NamespaceTrain() {
       .finally(() => setFactsLoading(false))
   }, [namespace])
 
+  async function handleDeleteFact(factId: string) {
+    try {
+      await deleteFact(namespace, factId)
+      setFacts((current) => current.filter((f) => f.id !== factId))
+      showToast('Fact deleted')
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to delete fact', 'error')
+    }
+  }
+
   return (
     <div className="train-grid">
       <CreateEntityForm
         entities={entities}
         loading={entitiesLoading}
         error={entitiesError}
-        onCreated={(entity) => setEntities((current) => [entity, ...current])}
+        onCreated={(entity) => {
+          setEntities((current) => [entity, ...current])
+          showToast('Entity created')
+        }}
+        onSelect={setSelectedEntity}
       />
       <AddSurfaceTextForm
         entities={entities}
-        onAdded={(updated) =>
+        onAdded={(updated) => {
           setEntities((current) =>
             current.map((e) => (e.entity_id === updated.entity_id ? updated : e)),
           )
-        }
+          showToast('Surface text added')
+        }}
       />
       <AddRegexRuleForm entities={entities} />
       <CreateFactForm
+        entities={entities}
         facts={facts}
         loading={factsLoading}
         error={factsError}
-        onCreated={(fact) => setFacts((current) => [fact, ...current])}
+        onCreated={(fact) => {
+          setFacts((current) => [fact, ...current])
+          showToast('Fact created')
+        }}
+        onDelete={handleDeleteFact}
+      />
+
+      <EntityDetailPanel
+        key={selectedEntity?.entity_id ?? 'entity-panel-closed'}
+        namespace={namespace}
+        entity={selectedEntity}
+        onOpenChange={() => setSelectedEntity(null)}
+        onEntityChanged={(updated) => {
+          setEntities((current) =>
+            current.map((e) => (e.entity_id === updated.entity_id ? updated : e)),
+          )
+          setSelectedEntity(updated)
+        }}
+        onEntityDeleted={(entityId) => {
+          setEntities((current) => current.filter((e) => e.entity_id !== entityId))
+        }}
       />
     </div>
   )
@@ -70,11 +115,13 @@ function CreateEntityForm({
   loading,
   error,
   onCreated,
+  onSelect,
 }: {
   entities: Entity[]
   loading: boolean
   error: string | null
   onCreated: (entity: Entity) => void
+  onSelect: (entity: Entity) => void
 }) {
   const { namespace } = useNamespaceContext()
   const [entityId, setEntityId] = useState('')
@@ -146,9 +193,20 @@ function CreateEntityForm({
       {error && <p className="error">{error}</p>}
       <ul className="plain-list">
         {entities.map((entity) => (
-          <li key={entity.entity_id}>
-            <strong>{entity.entity_id}</strong> ({entity.label}) -{' '}
-            {entity.surface_texts.join(', ') || 'no surface texts'}
+          <li key={entity.entity_id} className="row-with-menu">
+            <button
+              type="button"
+              className="link-row"
+              onClick={() => onSelect(entity)}
+            >
+              <strong>{entity.entity_id}</strong> ({entity.label}) -{' '}
+              {entity.surface_texts.join(', ') || 'no surface texts'}
+            </button>
+            <ActionMenu
+              items={[
+                { label: 'View details', icon: Eye, onClick: () => onSelect(entity) },
+              ]}
+            />
           </li>
         ))}
       </ul>
@@ -229,16 +287,15 @@ function AddSurfaceTextForm({
 
 function AddRegexRuleForm({ entities }: { entities: Entity[] }) {
   const { namespace } = useNamespaceContext()
+  const { showToast } = useToast()
   const [entityId, setEntityId] = useState('')
   const [regex, setRegex] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
-  const [submitted, setSubmitted] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
     setFormError(null)
-    setSubmitted(null)
 
     if (!entityId || !regex.trim()) {
       setFormError('Pick an entity and enter a pattern')
@@ -249,7 +306,7 @@ function AddRegexRuleForm({ entities }: { entities: Entity[] }) {
 
     try {
       await addRegexRule(namespace, entityId, regex.trim())
-      setSubmitted(`Added regex rule to ${entityId}`)
+      showToast(`Added regex rule to ${entityId}`)
       setRegex('')
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to add regex rule')
@@ -287,7 +344,6 @@ function AddRegexRuleForm({ entities }: { entities: Entity[] }) {
           />
         </div>
         {formError && <p className="error">{formError}</p>}
-        {submitted && <p className="muted small">{submitted}</p>}
         <button type="submit" disabled={submitting}>
           {submitting ? 'Adding…' : 'Add regex rule'}
         </button>
@@ -297,15 +353,19 @@ function AddRegexRuleForm({ entities }: { entities: Entity[] }) {
 }
 
 function CreateFactForm({
+  entities,
   facts,
   loading,
   error,
   onCreated,
+  onDelete,
 }: {
+  entities: Entity[]
   facts: Fact[]
   loading: boolean
   error: string | null
   onCreated: (fact: Fact) => void
+  onDelete: (factId: string) => void
 }) {
   const { namespace } = useNamespaceContext()
   const [source, setSource] = useState('')
@@ -343,8 +403,8 @@ function CreateFactForm({
       <h3>Create fact</h3>
       <form onSubmit={handleSubmit}>
         <div className="field">
-          <label htmlFor="fact-source">Source entity_id</label>
-          <input id="fact-source" value={source} onChange={(e) => setSource(e.target.value)} />
+          <label htmlFor="fact-source">Source entity</label>
+          <EntityCombobox entities={entities} value={source} onChange={setSource} />
         </div>
         <div className="field">
           <label htmlFor="fact-predicate">Predicate</label>
@@ -356,8 +416,8 @@ function CreateFactForm({
           />
         </div>
         <div className="field">
-          <label htmlFor="fact-target">Target entity_id</label>
-          <input id="fact-target" value={target} onChange={(e) => setTarget(e.target.value)} />
+          <label htmlFor="fact-target">Target entity</label>
+          <EntityCombobox entities={entities} value={target} onChange={setTarget} />
         </div>
         {formError && <p className="error">{formError}</p>}
         <button type="submit" disabled={submitting}>
@@ -369,8 +429,20 @@ function CreateFactForm({
       {error && <p className="error">{error}</p>}
       <ul className="plain-list">
         {facts.map((fact) => (
-          <li key={fact.id}>
-            {fact.source} --[{fact.predicate}]--&gt; {fact.target}
+          <li key={fact.id} className="row-with-menu">
+            <span>
+              {fact.source} --[{fact.predicate}]--&gt; {fact.target}
+            </span>
+            <ActionMenu
+              items={[
+                {
+                  label: 'Delete',
+                  icon: Trash2,
+                  destructive: true,
+                  onClick: () => onDelete(fact.id),
+                },
+              ]}
+            />
           </li>
         ))}
       </ul>
