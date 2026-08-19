@@ -10,9 +10,7 @@ Phase 2 of the training playground: a Vite + React app (`playground/`) served by
 
 ### Added
 
-- `playground/` - React app scaffold (namespace list + create form at `/`, stub namespace detail page at `/namespaces/:name`). Built with `npm run build`, served directly by FastAPI when `playground/dist/` exists.
-- Docker image now builds the frontend in a separate stage and bundles the built assets.
-- CI gains a `build-playground` job that builds the frontend on every push/PR.
+- `playground/` - React app scaffold (namespace list + create form at `/`, stub namespace detail page at `/namespaces/:name`), served directly by FastAPI when `playground/dist/` exists. `dist/` is committed to the repo rather than built in CI/Docker - after changing `playground/src`, run `npm run build` and commit the result (see `playground/README.md`). `playground/.nvmrc` pins the Node version for local development.
 
 ### Changed (breaking)
 
