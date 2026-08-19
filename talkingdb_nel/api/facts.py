@@ -8,7 +8,7 @@ from talkingdb_nel.services.entity.entity import create_fact, get_fact, list_fac
 from talkingdb_nel.services.namespace.registry import NamespaceBundle
 
 router = APIRouter(
-    prefix="/namespaces/{namespace}/facts",
+    prefix="/api/namespaces/{namespace}/facts",
     tags=["Facts"],
 )
 

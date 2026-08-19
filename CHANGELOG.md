@@ -4,6 +4,18 @@ All notable changes to this project are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [6.0.0] - Playground UI shell + /api prefix (breaking)
+
+Phase 2 of the training playground: a Vite + React app (`playground/`) served by FastAPI itself, visible at `/`. This release lists/creates namespaces and links into a (currently stub) namespace detail page - training/testing/history/graph screens are still to come.
+
+### Added
+
+- `playground/` - React app scaffold (namespace list + create form at `/`, stub namespace detail page at `/namespaces/:name`), served directly by FastAPI when `playground/dist/` exists. `dist/` is committed to the repo rather than built in CI/Docker - after changing `playground/src`, run `npm run build` and commit the result (see `playground/README.md`). `playground/.nvmrc` pins the Node version for local development.
+
+### Changed (breaking)
+
+- **Every API route moves under `/api`**: `POST/GET /namespaces` -> `POST/GET /api/namespaces`, and likewise for every namespace/entity/fact/extraction route added in [5.0.0](#500---namespaces-and-training-version-control-breaking). Needed because the frontend's client-side route for a namespace's detail page (`/namespaces/{name}`) is otherwise indistinguishable from the REST endpoint of the same path - a client hitting `GET /namespaces/{name}` directly (as opposed to loading it through the browser) would get routed to whichever handler FastAPI resolves first. Prefixing the API frees the entire bare URL space for the frontend, permanently, not just for this one route.
+
 ## [5.0.0] - Namespaces and training version control (breaking)
 
 Foundation for the training playground: every entity/fact/regex/extraction endpoint now lives under an isolated **namespace** - a fully separate entity graph, dictionary, and regex ruleset, addressable by name. This is the first of two things that make this release breaking:

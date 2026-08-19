@@ -42,7 +42,7 @@ def test_create_extraction(client, monkeypatch):
     )
 
     response = client.post(
-        f"/namespaces/{NS}/extractions",
+        f"/api/namespaces/{NS}/extractions",
         json={"message_text": "I like Apple", "word_correction": False},
     )
 
@@ -64,7 +64,7 @@ def test_create_extraction_passes_word_correction_flag(client, monkeypatch):
     monkeypatch.setattr(extraction, "get_surface_texts", fake)
 
     client.post(
-        f"/namespaces/{NS}/extractions",
+        f"/api/namespaces/{NS}/extractions",
         json={"message_text": "hello", "word_correction": True},
     )
 

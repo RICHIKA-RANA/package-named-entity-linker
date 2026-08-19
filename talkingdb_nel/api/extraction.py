@@ -8,7 +8,7 @@ from talkingdb_nel.services.entity.entity import get_surface_texts
 from talkingdb_nel.services.namespace.registry import NamespaceBundle
 
 router = APIRouter(
-    prefix="/namespaces/{namespace}/extractions",
+    prefix="/api/namespaces/{namespace}/extractions",
     tags=["Extraction"],
 )
 

@@ -17,7 +17,7 @@ from talkingdb_nel.services.entity.entity import (
 from talkingdb_nel.services.namespace.registry import NamespaceBundle
 
 router = APIRouter(
-    prefix="/namespaces/{namespace}/entities",
+    prefix="/api/namespaces/{namespace}/entities",
     tags=["Entities"],
 )
 

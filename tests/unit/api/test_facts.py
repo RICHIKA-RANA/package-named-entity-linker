@@ -30,7 +30,7 @@ def test_create_fact_success(client, monkeypatch):
     )
 
     response = client.post(
-        f"/namespaces/{NS}/facts",
+        f"/api/namespaces/{NS}/facts",
         json={
             "source": "A",
             "predicate": "KNOWS",
@@ -58,7 +58,7 @@ def test_list_facts(client, monkeypatch):
         ],
     )
 
-    response = client.get(f"/namespaces/{NS}/facts")
+    response = client.get(f"/api/namespaces/{NS}/facts")
 
     assert response.status_code == 200
     assert response.json() == [
@@ -78,7 +78,7 @@ def test_get_fact_success(client, monkeypatch):
         },
     )
 
-    response = client.get(f"/namespaces/{NS}/facts/fact-1")
+    response = client.get(f"/api/namespaces/{NS}/facts/fact-1")
 
     assert response.status_code == 200
     assert response.json()["id"] == "fact-1"
@@ -87,6 +87,6 @@ def test_get_fact_success(client, monkeypatch):
 def test_get_fact_not_found(client, monkeypatch):
     monkeypatch.setattr(facts, "get_fact", lambda bundle, fact_id: None)
 
-    response = client.get(f"/namespaces/{NS}/facts/fact-1")
+    response = client.get(f"/api/namespaces/{NS}/facts/fact-1")
 
     assert response.status_code == 404

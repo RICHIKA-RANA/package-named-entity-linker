@@ -1,6 +1,6 @@
 FROM python:3.13-slim-bookworm
 
-RUN apt-get update && apt-get install -y curl 
+RUN apt-get update && apt-get install -y curl
 RUN curl -sSL https://install.python-poetry.org | python3 -
 
 ENV PATH="/root/.local/bin:$PATH"
@@ -13,6 +13,7 @@ RUN --mount=type=cache,target=/root/.cache/pypoetry \
     poetry config virtualenvs.create false && poetry lock && poetry install --no-root --no-interaction --no-ansi --only main
 
 COPY ./talkingdb_nel /app/talkingdb_nel
+COPY ./playground/dist /app/playground/dist
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app

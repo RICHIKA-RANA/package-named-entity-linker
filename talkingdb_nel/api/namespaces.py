@@ -13,7 +13,7 @@ from talkingdb_nel.services.namespace.versioning import (
 )
 
 router = APIRouter(
-    prefix="/namespaces",
+    prefix="/api/namespaces",
     tags=["Namespaces"],
 )
 
