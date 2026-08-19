@@ -26,7 +26,7 @@ def test_phone():
     results = controller.process("Call me on 9876543210 tomorrow.")
 
     assert len(results) == 1
-    assert results[0]["surfaceText"] == "9876543210"
+    assert results[0]["surface_text"] == "9876543210"
     assert results[0]["rule"] == "phone"
 
 
@@ -36,7 +36,7 @@ def test_email():
     results = controller.process("Mail john@test.com today.")
 
     assert len(results) == 1
-    assert results[0]["surfaceText"] == "john@test.com"
+    assert results[0]["surface_text"] == "john@test.com"
     assert results[0]["rule"] == "email"
 
 
@@ -60,7 +60,7 @@ def test_case_insensitive():
     results = controller.process("HELLO")
 
     assert len(results) == 1
-    assert results[0]["surfaceText"] == "HELLO"
+    assert results[0]["surface_text"] == "HELLO"
 
 
 def test_multiple_rules():

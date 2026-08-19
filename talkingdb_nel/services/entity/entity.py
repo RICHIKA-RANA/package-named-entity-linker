@@ -11,33 +11,83 @@ from talkingdb_nel.services.entity.base import (
 from talkingdb_nel.services.symbolic.notag import NoTag
 
 
+class EntityNotFoundError(Exception):
+    """Raised when a referenced entity_id does not exist."""
+
+
+class EntityAlreadyExistsError(Exception):
+    """Raised when creating an entity_id that already exists."""
+
+
+class SurfaceTextAlreadyExistsError(Exception):
+    """Raised when adding a surface text an entity already has."""
+
+
 def index_entity(entity: dict):
     word_matcher.load([entity])
     phrase_matcher.load([entity])
 
 
-def create_entity(entity: dict):
+def create_entity(
+    entity_id: str,
+    label: str | None = None,
+    surface_texts: list[str] | None = None,
+) -> dict:
+    if entity_model.has_entity(entity_id):
+        raise EntityAlreadyExistsError(entity_id)
+
+    surface_texts = list(surface_texts or [])
+    resolved_label = label or entity_id
+
     entity_model.add_entity(
-        entity_id=entity["_id"],
-        label=entity.get("label", entity["_id"]),
-        surface_texts=entity.get("surface_texts", []),
+        entity_id=entity_id,
+        label=resolved_label,
+        surface_texts=surface_texts,
     )
 
-    index_entity(entity)
+    index_entity({"entity_id": entity_id, "surface_texts": surface_texts})
 
-    return {"success": True}
+    return {
+        "entity_id": entity_id,
+        "label": resolved_label,
+        "surface_texts": surface_texts,
+    }
 
 
-def add_surface_text(entity_id: str, surface_text: str):
+def get_entity(entity_id: str) -> dict | None:
     entity = entity_model.get_entity(entity_id)
 
     if entity is None:
-        return {"success": False, "message": "Entity not found"}
+        return None
+
+    return {
+        "entity_id": entity["id"],
+        "label": entity["label"],
+        "surface_texts": entity["surface_texts"],
+    }
+
+
+def list_entities() -> list[dict]:
+    return [
+        {
+            "entity_id": entity["id"],
+            "label": entity["label"],
+            "surface_texts": entity["surface_texts"],
+        }
+        for entity in entity_model.iter_entities()
+    ]
+
+
+def add_surface_text(entity_id: str, surface_text: str) -> dict:
+    entity = entity_model.get_entity(entity_id)
+
+    if entity is None:
+        raise EntityNotFoundError(entity_id)
 
     texts = entity["surface_texts"]
 
     if surface_text in texts:
-        return {"success": False, "message": "Already exists"}
+        raise SurfaceTextAlreadyExistsError(surface_text)
 
     texts.append(surface_text)
 
@@ -48,12 +98,16 @@ def add_surface_text(entity_id: str, surface_text: str):
 
     index_entity(
         {
-            "_id": entity_id,
+            "entity_id": entity_id,
             "surface_texts": [surface_text],
         }
     )
 
-    return {"success": True}
+    return {
+        "entity_id": entity_id,
+        "label": entity["label"],
+        "surface_texts": texts,
+    }
 
 
 def create_fact(
@@ -61,15 +115,29 @@ def create_fact(
     predicate: str,
     target: str,
     **attributes,
-):
-    entity_model.add_fact(
+) -> dict:
+    fact_id = entity_model.add_fact(
         source=source,
         target=target,
         predicate=predicate,
         **attributes,
     )
 
-    return {"success": True}
+    return {
+        "id": fact_id,
+        "source": source,
+        "target": target,
+        "predicate": predicate,
+        **attributes,
+    }
+
+
+def get_fact(fact_id: str) -> dict | None:
+    return entity_model.get_fact(fact_id)
+
+
+def list_facts() -> list[dict]:
+    return list(entity_model.iter_facts())
 
 
 def _suggestion_parts(suggestion):
@@ -83,7 +151,7 @@ def _suggestion_parts(suggestion):
 def _resolve_entities(suggestions):
     """
     Resolve raw matcher suggestions (surface text + edit distance) to the
-    entity `_id`(s) they were trained under.
+    entity `entity_id`(s) they were trained under.
     """
 
     resolved = []
@@ -100,7 +168,7 @@ def _resolve_entities(suggestions):
 
             resolved.append(
                 {
-                    "_id": entity["id"],
+                    "entity_id": entity["id"],
                     "label": entity["label"],
                     "surface_text": text,
                 }
@@ -167,14 +235,17 @@ def _find_fuzzy_matches(message_text: str, no_tags: list[dict]):
             }
 
 
-def create_regex(entity_id: str, regex: str):
+def create_regex(entity_id: str, regex: str) -> dict:
+    if not entity_model.has_entity(entity_id):
+        raise EntityNotFoundError(entity_id)
+
     regex_model.add_rule(
         entity_id,
         regex,
     )
     regex_model.save(regex_conn)
 
-    return {"success": True}
+    return {"entity_id": entity_id, "regex": regex}
 
 
 def get_surface_texts(
@@ -278,7 +349,7 @@ def get_surface_texts(
     ]
 
     return {
-        "UniversalEntities": universal_entities,
-        "RegexEntities": filtered_regex,
-        "NoTagEntities": remaining_no_tags,
+        "universal_entities": universal_entities,
+        "regex_entities": filtered_regex,
+        "no_tag_entities": remaining_no_tags,
     }
