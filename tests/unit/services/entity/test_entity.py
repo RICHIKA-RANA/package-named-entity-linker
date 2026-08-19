@@ -327,6 +327,10 @@ def test_get_surface_texts_word_correction_flag_gates_fuzzy_matches(monkeypatch)
         {"_id": "Q1", "label": "Mayank", "surface_text": "mayank"}
     ]
 
+    no_tag_texts = [tag["surface_text"] for tag in result_on["NoTagEntities"]]
+    assert "myank" not in no_tag_texts
+    assert no_tag_texts == ["is", "here"]
+
 
 def test_create_regex(monkeypatch):
     called = []
