@@ -1,6 +1,8 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom'
 import NamespaceList from './pages/NamespaceList'
-import NamespaceDetail from './pages/NamespaceDetail'
+import NamespaceLayout from './pages/NamespaceLayout'
+import NamespaceTrain from './pages/NamespaceTrain'
+import NamespaceTest from './pages/NamespaceTest'
 
 function App() {
   return (
@@ -12,7 +14,11 @@ function App() {
         <main className="app-main">
           <Routes>
             <Route path="/" element={<NamespaceList />} />
-            <Route path="/namespaces/:name" element={<NamespaceDetail />} />
+            <Route path="/namespaces/:name" element={<NamespaceLayout />}>
+              <Route index element={<Navigate to="train" replace />} />
+              <Route path="train" element={<NamespaceTrain />} />
+              <Route path="test" element={<NamespaceTest />} />
+            </Route>
           </Routes>
         </main>
       </div>

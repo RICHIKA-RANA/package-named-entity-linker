@@ -1,13 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, NavLink, Outlet, useParams } from 'react-router-dom'
 import { getNamespace, type Namespace } from '../api'
+import type { NamespaceContext } from './namespaceContext'
 
-const COMING_SOON = ['Train', 'Test', 'History', 'Graph']
-
-// Keyed by `name` in App.tsx so React fully remounts (and state resets
-// naturally) when navigating between two different namespaces, rather
-// than reusing this instance and resetting loading/error by hand.
-function NamespaceDetail({ name }: { name: string }) {
+function NamespaceLayoutInner({ name }: { name: string }) {
   const [namespace, setNamespace] = useState<Namespace | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -39,22 +35,29 @@ function NamespaceDetail({ name }: { name: string }) {
           </p>
 
           <nav className="tab-nav">
-            {COMING_SOON.map((label) => (
-              <button key={label} disabled title="Coming soon">
-                {label}
-              </button>
-            ))}
+            <NavLink to="train">Train</NavLink>
+            <NavLink to="test">Test</NavLink>
+            <button disabled title="Coming soon">
+              History
+            </button>
+            <button disabled title="Coming soon">
+              Graph
+            </button>
           </nav>
+
+          <div className="tab-content">
+            <Outlet context={{ namespace: name } satisfies NamespaceContext} />
+          </div>
         </>
       )}
     </section>
   )
 }
 
-export default function NamespaceDetailRoute() {
+export default function NamespaceLayout() {
   const { name } = useParams<{ name: string }>()
 
   if (!name) return null
 
-  return <NamespaceDetail key={name} name={name} />
+  return <NamespaceLayoutInner key={name} name={name} />
 }
