@@ -3,12 +3,16 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from talkingdb_nel.api import extraction
+from talkingdb_nel.api.dependencies import get_namespace_bundle
+
+NS = "test-ns"
 
 
 @pytest.fixture
 def client():
     app = FastAPI()
     app.include_router(extraction.router)
+    app.dependency_overrides[get_namespace_bundle] = lambda: object()
     return TestClient(app)
 
 
@@ -16,7 +20,7 @@ def test_create_extraction(client, monkeypatch):
     monkeypatch.setattr(
         extraction,
         "get_surface_texts",
-        lambda **kwargs: {
+        lambda bundle, **kwargs: {
             "universal_entities": [
                 {
                     "index": [0, 5],
@@ -38,7 +42,7 @@ def test_create_extraction(client, monkeypatch):
     )
 
     response = client.post(
-        "/extractions",
+        f"/namespaces/{NS}/extractions",
         json={"message_text": "I like Apple", "word_correction": False},
     )
 
@@ -53,14 +57,14 @@ def test_create_extraction(client, monkeypatch):
 def test_create_extraction_passes_word_correction_flag(client, monkeypatch):
     calls = {}
 
-    def fake(**kwargs):
+    def fake(bundle, **kwargs):
         calls.update(kwargs)
         return {"universal_entities": [], "regex_entities": [], "no_tag_entities": []}
 
     monkeypatch.setattr(extraction, "get_surface_texts", fake)
 
     client.post(
-        "/extractions",
+        f"/namespaces/{NS}/extractions",
         json={"message_text": "hello", "word_correction": True},
     )
 

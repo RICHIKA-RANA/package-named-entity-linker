@@ -70,6 +70,7 @@ class BaseMatcher:
 
         if self.dictionary.has_word(text):
             self.dictionary.increment_frequency(text)
+            self._update_longest(text)
             return False
 
         self.dictionary.insert_word(text)

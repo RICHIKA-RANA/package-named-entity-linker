@@ -1,12 +1,14 @@
 from typing import List
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
+from talkingdb_nel.api.dependencies import get_namespace_bundle
 from talkingdb_nel.services.entity.entity import get_surface_texts
+from talkingdb_nel.services.namespace.registry import NamespaceBundle
 
 router = APIRouter(
-    prefix="/extractions",
+    prefix="/namespaces/{namespace}/extractions",
     tags=["Extraction"],
 )
 
@@ -91,8 +93,12 @@ class ExtractionResponse(BaseModel):
         "resolves matches to trained entities."
     ),
 )
-def create_extraction(payload: ExtractionRequest) -> ExtractionResponse:
+def create_extraction(
+    payload: ExtractionRequest,
+    bundle: NamespaceBundle = Depends(get_namespace_bundle),
+) -> ExtractionResponse:
     return get_surface_texts(
+        bundle,
         message_text=payload.message_text,
         word_correction=payload.word_correction,
     )

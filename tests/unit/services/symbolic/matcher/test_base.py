@@ -44,3 +44,26 @@ def test_longest_word_length(word_matcher):
 
 def test_base_matcher_type(word_matcher):
     assert isinstance(word_matcher, BaseMatcher)
+
+
+def test_longest_word_length_updates_when_word_already_exists(word_matcher):
+    """
+    Regression test: word_matcher and phrase_matcher share one dictionary
+    table. A single-word surface text collides - both insert the exact
+    same string - so the second matcher to touch it hits the
+    already-exists branch of create_dictionary_entry(). Its own
+    longest_word_length (a distinct metadata key) must still get updated,
+    not silently stay 0 forever.
+    """
+    from talkingdb_nel.services.symbolic.matcher.phrase import PhraseMatcher
+
+    phrase_matcher = PhraseMatcher(word_matcher.dictionary)
+
+    word_matcher.create_dictionary_entry("mayank")
+    assert word_matcher.longest_word_length == len("mayank")
+
+    # phrase_matcher inserts the identical string - already exists in the
+    # shared table - but must still learn its own longest-word length.
+    phrase_matcher.create_dictionary_entry("mayank")
+
+    assert phrase_matcher.longest_word_length == len("mayank")

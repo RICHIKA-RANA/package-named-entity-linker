@@ -1,8 +1,9 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
+from talkingdb_nel.api.dependencies import get_namespace_bundle
 from talkingdb_nel.services.entity.entity import (
     EntityAlreadyExistsError,
     EntityNotFoundError,
@@ -13,9 +14,10 @@ from talkingdb_nel.services.entity.entity import (
     get_entity,
     list_entities,
 )
+from talkingdb_nel.services.namespace.registry import NamespaceBundle
 
 router = APIRouter(
-    prefix="/entities",
+    prefix="/namespaces/{namespace}/entities",
     tags=["Entities"],
 )
 
@@ -63,9 +65,13 @@ class RegexRuleResponse(BaseModel):
         "initial surface texts. Fails with 409 if entity_id already exists."
     ),
 )
-def create_new_entity(payload: EntityCreateRequest) -> EntityResponse:
+def create_new_entity(
+    payload: EntityCreateRequest,
+    bundle: NamespaceBundle = Depends(get_namespace_bundle),
+) -> EntityResponse:
     try:
         return create_entity(
+            bundle,
             entity_id=payload.entity_id,
             label=payload.label,
             surface_texts=payload.surface_texts,
@@ -81,10 +87,12 @@ def create_new_entity(payload: EntityCreateRequest) -> EntityResponse:
     "",
     response_model=List[EntityResponse],
     summary="List entities",
-    description="Returns every entity currently registered.",
+    description="Returns every entity currently registered in this namespace.",
 )
-def get_all_entities() -> List[EntityResponse]:
-    return list_entities()
+def get_all_entities(
+    bundle: NamespaceBundle = Depends(get_namespace_bundle),
+) -> List[EntityResponse]:
+    return list_entities(bundle)
 
 
 @router.get(
@@ -93,8 +101,11 @@ def get_all_entities() -> List[EntityResponse]:
     summary="Get an entity",
     description="Returns a single entity by id. 404 if it doesn't exist.",
 )
-def get_entity_by_id(entity_id: str) -> EntityResponse:
-    result = get_entity(entity_id)
+def get_entity_by_id(
+    entity_id: str,
+    bundle: NamespaceBundle = Depends(get_namespace_bundle),
+) -> EntityResponse:
+    result = get_entity(bundle, entity_id)
 
     if result is None:
         raise HTTPException(
@@ -119,9 +130,11 @@ def get_entity_by_id(entity_id: str) -> EntityResponse:
 def add_entity_surface_text(
     entity_id: str,
     payload: SurfaceTextAddRequest,
+    bundle: NamespaceBundle = Depends(get_namespace_bundle),
 ) -> EntityResponse:
     try:
         return add_surface_text(
+            bundle,
             entity_id=entity_id,
             surface_text=payload.surface_text,
         )
@@ -150,9 +163,10 @@ def add_entity_surface_text(
 def add_entity_regex_rule(
     entity_id: str,
     payload: RegexRuleCreateRequest,
+    bundle: NamespaceBundle = Depends(get_namespace_bundle),
 ) -> RegexRuleResponse:
     try:
-        return create_regex(entity_id=entity_id, regex=payload.regex)
+        return create_regex(bundle, entity_id=entity_id, regex=payload.regex)
     except EntityNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
