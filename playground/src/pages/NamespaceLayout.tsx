@@ -39,6 +39,7 @@ function NamespaceLayoutInner({ name }: { name: string }) {
             <NavLink to="test">Test</NavLink>
             <NavLink to="history">History</NavLink>
             <NavLink to="graph">Graph</NavLink>
+            <NavLink to="code">Code</NavLink>
           </nav>
 
           <div className="tab-content">
