@@ -5,6 +5,7 @@ import NamespaceTrain from './pages/NamespaceTrain'
 import NamespaceTest from './pages/NamespaceTest'
 import NamespaceHistory from './pages/NamespaceHistory'
 import NamespaceGraph from './pages/NamespaceGraph'
+import NamespaceCode from './pages/NamespaceCode'
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
               <Route path="test" element={<NamespaceTest />} />
               <Route path="history" element={<NamespaceHistory />} />
               <Route path="graph" element={<NamespaceGraph />} />
+              <Route path="code" element={<NamespaceCode />} />
             </Route>
           </Routes>
         </main>
