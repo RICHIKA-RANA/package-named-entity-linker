@@ -56,6 +56,11 @@ a {
   color: var(--accent);
 }
 
+.train-grid {
+  display: flex;
+  flex-direction: column;
+}
+
 .card {
   border: 1px solid var(--border);
   background: var(--card-bg);
@@ -120,14 +125,108 @@ button:disabled {
   font-size: 13px;
 }
 
+h3 {
+  font-size: 15px;
+  color: var(--text-h);
+  margin: 0 0 12px;
+}
+
+h4 {
+  font-size: 13px;
+  color: var(--text-h);
+  margin: 16px 0 4px;
+}
+
 .tab-nav {
   display: flex;
   gap: 8px;
   margin-top: 16px;
+  margin-bottom: 20px;
 }
 
 .tab-nav button {
   background: transparent;
   color: var(--text-muted);
   border-color: var(--border);
+}
+
+.tab-nav a {
+  display: inline-block;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.tab-nav a.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+select,
+textarea {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.field-checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.field-checkbox input {
+  width: auto;
+}
+
+.plain-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.plain-list li {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.plain-list li:last-child {
+  border-bottom: none;
+}
+
+.highlighted-text {
+  line-height: 1.7;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  white-space: pre-wrap;
+}
+
+mark.highlight-entity,
+mark.highlight-regex {
+  border-radius: 3px;
+  padding: 1px 2px;
+  color: inherit;
+}
+
+mark.highlight-entity {
+  background: rgba(37, 99, 235, 0.25);
+}
+
+mark.highlight-regex {
+  background: rgba(217, 119, 6, 0.25);
 }
