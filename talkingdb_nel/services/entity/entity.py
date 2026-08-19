@@ -109,6 +109,64 @@ def _resolve_entities(suggestions):
     return resolved
 
 
+MAX_FUZZY_WINDOW_WORDS = 4
+
+
+def _iter_no_tag_windows(message_text: str, no_tags: list[dict]):
+    """
+    Yield (start, end, text) windows over contiguous runs of no-tag tokens,
+    joining up to MAX_FUZZY_WINDOW_WORDS whitespace-adjacent tokens so
+    multi-word surface texts can be fuzzy-matched as a single phrase.
+    """
+
+    for i in range(len(no_tags)):
+        start = no_tags[i]["index"][0]
+        end = no_tags[i]["index"][1]
+
+        yield start, end, message_text[start : end + 1]
+
+        for j in range(i + 1, min(i + MAX_FUZZY_WINDOW_WORDS, len(no_tags))):
+            gap = message_text[no_tags[j - 1]["index"][1] + 1 : no_tags[j]["index"][0]]
+
+            if gap.strip():
+                break
+
+            end = no_tags[j]["index"][1]
+
+            yield start, end, message_text[start : end + 1]
+
+
+def _find_fuzzy_matches(message_text: str, no_tags: list[dict]):
+    seen = set()
+
+    for start, end, window_text in _iter_no_tag_windows(message_text, no_tags):
+        for suggestion in phrase_matcher.get_suggestions(
+            window_text,
+            max_edit_distance=1,
+        ):
+            candidate, distance = _suggestion_parts(suggestion)
+
+            seen_key = (start, end, candidate)
+
+            if seen_key in seen:
+                continue
+
+            entities = _resolve_entities([suggestion])
+
+            if not entities:
+                continue
+
+            seen.add(seen_key)
+
+            yield {
+                "index": [start, end],
+                "surface_text": message_text[start : end + 1],
+                "corrected_text": candidate,
+                "score": -distance,
+                "entities": entities,
+            }
+
+
 def create_regex(entity_id: str, regex: str):
     regex_model.add_rule(
         entity_id,
@@ -170,7 +228,7 @@ def get_surface_texts(
 
         additional = phrase_matcher.get_suggestions(
             text,
-            max_edit_distance=1,
+            max_edit_distance=1 if word_correction else 0,
         )
 
         for suggestion in additional:
@@ -196,6 +254,16 @@ def get_surface_texts(
                 }
             )
 
+            seen.add(seen_key)
+
+    if word_correction:
+        for match in _find_fuzzy_matches(message_text, no_tags):
+            seen_key = tuple(match["index"]) + (match["corrected_text"],)
+
+            if seen_key in seen:
+                continue
+
+            universal_entities.append(match)
             seen.add(seen_key)
 
     return {
