@@ -1,7 +1,7 @@
 import { lazy, type ComponentType } from 'react'
 import { Sparkles, FlaskConical, GitCommitHorizontal, Share2, Code2 } from 'lucide-react'
 import NamespaceTrain from './NamespaceTrain'
-import NamespaceTest from './NamespaceTest'
+import NamespaceTests from './NamespaceTests'
 import NamespaceHistory from './NamespaceHistory'
 import NamespaceCode from './NamespaceCode'
 
@@ -23,7 +23,7 @@ interface PaneView {
 
 export const PANE_VIEWS: PaneView[] = [
   { key: 'train', label: 'Train', icon: Sparkles, Component: NamespaceTrain },
-  { key: 'test', label: 'Tests', icon: FlaskConical, Component: NamespaceTest },
+  { key: 'test', label: 'Tests', icon: FlaskConical, Component: NamespaceTests },
   { key: 'history', label: 'History', icon: GitCommitHorizontal, Component: NamespaceHistory },
   { key: 'graph', label: 'Graph', icon: Share2, Component: NamespaceGraph },
   { key: 'code', label: 'Code', icon: Code2, Component: NamespaceCode },

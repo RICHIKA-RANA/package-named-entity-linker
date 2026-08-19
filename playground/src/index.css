@@ -1056,6 +1056,40 @@ mark.highlight-regex {
   color: var(--text-h);
 }
 
+.trend-line {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.trend-dot {
+  fill: var(--accent);
+}
+
+.upload-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+
+.upload-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.upload-actions button {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: var(--border);
+  font-size: 12px;
+  padding: 5px 10px;
+}
+
+.quick-add-preview {
+  margin-top: var(--space-3);
+}
+
 /* ------------------------------------------------------------------ */
 /* Responsive                                                           */
 /* ------------------------------------------------------------------ */
