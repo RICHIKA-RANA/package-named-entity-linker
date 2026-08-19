@@ -23,6 +23,10 @@ build/
 .cache/
 .coverage
 .coverage.*
+coverage.xml
+junit.xml
+code-coverage-results.md
+pr-comment-body.md
 htmlcov/
 .tox/
 .mypy_cache/

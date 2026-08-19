@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" role="img" aria-label="The REST API has three resource groups: Entities and Facts write training data into the shared SQLite knowledge base, while Extraction reads from that same knowledge base to resolve incoming text to entity_id.">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569" />
+    </marker>
+    <marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#7C3AED" />
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1200" height="640" fill="#FFFFFF" />
+
+  <text x="600" y="42" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#0F172A">TalkingDB NEL — API Resources</text>
+
+  <!-- Client -->
+  <rect x="40" y="270" width="150" height="90" rx="10" fill="#F8FAFC" stroke="#475569" stroke-width="1.5" />
+  <text x="115" y="308" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#0F172A">Client</text>
+  <text x="115" y="330" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#475569">training tool,</text>
+  <text x="115" y="345" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#475569">chatbot, etc.</text>
+
+  <!-- Entities -->
+  <rect x="340" y="70" width="250" height="130" rx="10" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5" />
+  <text x="465" y="98" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1E3A8A">Entities</text>
+  <text x="360" y="120" font-family="monospace" font-size="11.5" fill="#1E3A8A">POST /entities</text>
+  <text x="360" y="140" font-family="monospace" font-size="11.5" fill="#1E3A8A">GET /entities/{id}</text>
+  <text x="360" y="160" font-family="monospace" font-size="11.5" fill="#1E3A8A">POST .../surface-texts</text>
+  <text x="360" y="180" font-family="monospace" font-size="11.5" fill="#1E3A8A">POST .../regex-rules</text>
+
+  <!-- Facts -->
+  <rect x="340" y="255" width="250" height="90" rx="10" fill="#ECFDF5" stroke="#059669" stroke-width="1.5" />
+  <text x="465" y="283" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#065F46">Facts</text>
+  <text x="360" y="305" font-family="monospace" font-size="11.5" fill="#065F46">POST /facts</text>
+  <text x="360" y="325" font-family="monospace" font-size="11.5" fill="#065F46">GET /facts/{id}</text>
+
+  <!-- Extraction -->
+  <rect x="340" y="440" width="250" height="90" rx="10" fill="#F5F3FF" stroke="#7C3AED" stroke-width="1.5" />
+  <text x="465" y="468" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#5B21B6">Extraction</text>
+  <text x="360" y="490" font-family="monospace" font-size="11.5" fill="#5B21B6">POST /extractions</text>
+  <text x="365" y="512" font-family="Helvetica, Arial, sans-serif" font-size="10.5" fill="#5B21B6">message_text -&gt; entity_id</text>
+
+  <!-- Knowledge base -->
+  <rect x="760" y="185" width="240" height="160" rx="10" fill="#F0F9FF" stroke="#0369A1" stroke-width="1.5" />
+  <text x="880" y="213" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#0C4A6E">Knowledge Base</text>
+  <text x="880" y="230" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#0C4A6E">(SQLite)</text>
+  <text x="880" y="258" text-anchor="middle" font-family="monospace" font-size="11.5" fill="#0C4A6E">entities.db</text>
+  <text x="880" y="280" text-anchor="middle" font-family="monospace" font-size="11.5" fill="#0C4A6E">dictionary.db</text>
+  <text x="880" y="302" text-anchor="middle" font-family="monospace" font-size="11.5" fill="#0C4A6E">regex.db</text>
+
+  <!-- Client -> Entities/Facts/Extraction -->
+  <line x1="190" y1="300" x2="330" y2="150" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)" />
+  <line x1="190" y1="320" x2="330" y2="300" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)" />
+  <line x1="190" y1="340" x2="330" y2="480" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)" />
+  <text x="248" y="215" font-family="Helvetica, Arial, sans-serif" font-size="10.5" fill="#475569">HTTP</text>
+
+  <!-- Entities -> Knowledge base : trains -->
+  <path d="M590,135 C 680,135 680,220 755,235" fill="none" stroke="#2563EB" stroke-width="1.5" marker-end="url(#arrow)" />
+  <text x="640" y="180" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#1E3A8A">trains</text>
+
+  <!-- Facts -> Knowledge base : stores -->
+  <line x1="590" y1="300" x2="755" y2="300" stroke="#059669" stroke-width="1.5" marker-end="url(#arrow)" />
+  <text x="640" y="292" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#065F46">stores</text>
+
+  <!-- Knowledge base -> Extraction : resolves against -->
+  <path d="M840,345 C 760,420 620,470 592,478" fill="none" stroke="#7C3AED" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow-purple)" />
+  <rect x="668" y="388" width="112" height="18" fill="#FFFFFF" />
+  <text x="724" y="401" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#5B21B6">resolves against</text>
+
+  <!-- Legend -->
+  <rect x="40" y="560" width="14" height="14" fill="#EFF6FF" stroke="#2563EB" />
+  <text x="60" y="571" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#0F172A">Write training data (Entities)</text>
+  <rect x="330" y="560" width="14" height="14" fill="#ECFDF5" stroke="#059669" />
+  <text x="350" y="571" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#0F172A">Write relationships (Facts)</text>
+  <rect x="620" y="560" width="14" height="14" fill="#F5F3FF" stroke="#7C3AED" />
+  <text x="640" y="571" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#0F172A">Read + match (Extraction, dashed)</text>
+
+  <text x="600" y="610" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#64748B">Entities/Facts populate the same SQLite knowledge base that Extraction matches incoming text against.</text>
+</svg>

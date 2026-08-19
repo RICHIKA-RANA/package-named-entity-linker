@@ -44,47 +44,57 @@ jobs:
         run: |
           poetry run ruff check .
 
-      - name: Run tests
+      - name: Run tests with coverage
+        id: tests
+        continue-on-error: true
         env:
           NO_COLOR: "1"
           FORCE_COLOR: "0"
         shell: bash
         run: |
-          set -o pipefail
-          poetry run pytest 2>&1 | tee test-output.txt
-
-      - name: Generate coverage
-        run: |
           poetry run pytest \
             --cov=talkingdb_nel \
+            --cov-report=xml \
+            --cov-report=html \
             --cov-report=term-missing \
-            --cov-report=html
+            --junitxml=junit.xml
+
+      - name: Generate coverage summary
+        if: always()
+        continue-on-error: true
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        with:
+          filename: coverage.xml
+          badge: true
+          format: markdown
+          output: file
+
+      - name: Build PR comment body
+        if: always()
+        run: python3 .github/scripts/build_pr_comment.py
+
+      - name: Post sticky PR comment
+        if: always() && github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: ci-report
+          path: pr-comment-body.md
 
       - name: Upload coverage artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: htmlcov/
 
-      - name: Create PR comment
-        if: always() && github.event_name == 'pull_request'
-        shell: bash
-        run: |
-          {
-            echo "# ✅ CI Report"
-            echo
-            echo "Automated checks completed."
-            echo
-            echo "## Test Output"
-            echo
-            echo '```text'
-            cat test-output.txt
-            echo '```'
-          } > pr-comment.md
-
-      - name: Post PR comment
-        if: always() && github.event_name == 'pull_request'
-        uses: marocchino/sticky-pull-request-comment@v2
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
         with:
-          header: ci-report
-          path: pr-comment.md
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          fail_ci_if_error: true
+
+      - name: Fail workflow if tests failed
+        if: steps.tests.outcome == 'failure'
+        run: exit 1
