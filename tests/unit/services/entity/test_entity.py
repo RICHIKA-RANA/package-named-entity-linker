@@ -224,6 +224,110 @@ def test_get_surface_texts_attaches_entity_id_and_drops_unresolved(monkeypatch):
     ]
 
 
+def test_iter_no_tag_windows_builds_multi_word_windows():
+    message_text = "satyam gpta is here"
+    no_tags = [
+        {"index": [0, 5]},
+        {"index": [7, 10]},
+        {"index": [12, 13]},
+        {"index": [15, 18]},
+    ]
+
+    windows = list(entity._iter_no_tag_windows(message_text, no_tags))
+
+    assert (0, 5, "satyam") in windows
+    assert (7, 10, "gpta") in windows
+    assert (0, 10, "satyam gpta") in windows
+
+
+def test_iter_no_tag_windows_stops_at_non_whitespace_gap():
+    message_text = "satyam.gpta"
+    no_tags = [
+        {"index": [0, 5]},
+        {"index": [7, 10]},
+    ]
+
+    windows = list(entity._iter_no_tag_windows(message_text, no_tags))
+
+    assert (0, 10, "satyam.gpta") not in windows
+    assert (0, 5, "satyam") in windows
+    assert (7, 10, "gpta") in windows
+
+
+def test_find_fuzzy_matches(monkeypatch):
+    monkeypatch.setattr(
+        entity.phrase_matcher,
+        "get_suggestions",
+        lambda text, max_edit_distance=None: (
+            [("mayank", (3, 1))] if text == "myank" else []
+        ),
+    )
+    monkeypatch.setattr(
+        entity.entity_model,
+        "get_entities_by_surface_text",
+        lambda text: (
+            [{"id": "Q1", "label": "Mayank", "surface_texts": ["mayank"]}]
+            if text == "mayank"
+            else []
+        ),
+    )
+
+    message_text = "myank is here"
+    no_tags = [
+        {"index": [0, 4]},
+        {"index": [6, 7]},
+        {"index": [9, 12]},
+    ]
+
+    matches = list(entity._find_fuzzy_matches(message_text, no_tags))
+
+    assert matches == [
+        {
+            "index": [0, 4],
+            "surface_text": "myank",
+            "corrected_text": "mayank",
+            "score": -1,
+            "entities": [{"_id": "Q1", "label": "Mayank", "surface_text": "mayank"}],
+        }
+    ]
+
+
+def test_get_surface_texts_word_correction_flag_gates_fuzzy_matches(monkeypatch):
+    monkeypatch.setattr(
+        entity.lemmatizer,
+        "lemmatize",
+        lambda no_tags: (no_tags, []),
+    )
+    monkeypatch.setattr(
+        entity.phrase_matcher,
+        "get_suggestions",
+        lambda text, max_edit_distance=None: (
+            [("mayank", (3, 1))]
+            if text == "myank" and (max_edit_distance or 0) >= 1
+            else []
+        ),
+    )
+    monkeypatch.setattr(
+        entity.entity_model,
+        "get_entities_by_surface_text",
+        lambda text: (
+            [{"id": "Q1", "label": "Mayank", "surface_texts": ["mayank"]}]
+            if text == "mayank"
+            else []
+        ),
+    )
+
+    result_off = entity.get_surface_texts("myank is here", word_correction=False)
+    assert result_off["UniversalEntities"] == []
+
+    result_on = entity.get_surface_texts("myank is here", word_correction=True)
+    assert len(result_on["UniversalEntities"]) == 1
+    assert result_on["UniversalEntities"][0]["corrected_text"] == "mayank"
+    assert result_on["UniversalEntities"][0]["entities"] == [
+        {"_id": "Q1", "label": "Mayank", "surface_text": "mayank"}
+    ]
+
+
 def test_create_regex(monkeypatch):
     called = []
 
