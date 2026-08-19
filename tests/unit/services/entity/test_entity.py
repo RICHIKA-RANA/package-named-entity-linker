@@ -6,11 +6,12 @@ from talkingdb_nel.services.entity import entity
 @pytest.fixture(autouse=True)
 def reset_mocks(monkeypatch):
     monkeypatch.setattr(entity.entity_model, "add_entity", lambda **kwargs: None)
+    monkeypatch.setattr(entity.entity_model, "has_entity", lambda entity_id: False)
     monkeypatch.setattr(entity.entity_model, "get_entity", lambda entity_id: None)
     monkeypatch.setattr(
         entity.entity_model, "update_surface_texts", lambda *args, **kwargs: None
     )
-    monkeypatch.setattr(entity.entity_model, "add_fact", lambda **kwargs: None)
+    monkeypatch.setattr(entity.entity_model, "add_fact", lambda **kwargs: "fact-1")
 
     monkeypatch.setattr(
         entity.word_matcher,
@@ -46,7 +47,7 @@ def test_index_entity(monkeypatch):
     )
 
     e = {
-        "_id": "Q1",
+        "entity_id": "Q1",
         "surface_texts": ["Apple", "Apple Inc"],
     }
 
@@ -56,11 +57,83 @@ def test_index_entity(monkeypatch):
     assert phrase_loaded == [e]
 
 
+def test_create_entity_success():
+    result = entity.create_entity(
+        "Q1",
+        label="Apple",
+        surface_texts=["Apple", "Apple Inc"],
+    )
+
+    assert result == {
+        "entity_id": "Q1",
+        "label": "Apple",
+        "surface_texts": ["Apple", "Apple Inc"],
+    }
+
+
+def test_create_entity_defaults_label_to_entity_id():
+    result = entity.create_entity("Q1")
+
+    assert result == {
+        "entity_id": "Q1",
+        "label": "Q1",
+        "surface_texts": [],
+    }
+
+
+def test_create_entity_already_exists(monkeypatch):
+    monkeypatch.setattr(entity.entity_model, "has_entity", lambda entity_id: True)
+
+    with pytest.raises(entity.EntityAlreadyExistsError):
+        entity.create_entity("Q1")
+
+
+def test_get_entity_found(monkeypatch):
+    monkeypatch.setattr(
+        entity.entity_model,
+        "get_entity",
+        lambda entity_id: {
+            "id": entity_id,
+            "label": "Apple",
+            "surface_texts": ["Apple"],
+        },
+    )
+
+    assert entity.get_entity("Q1") == {
+        "entity_id": "Q1",
+        "label": "Apple",
+        "surface_texts": ["Apple"],
+    }
+
+
+def test_get_entity_missing():
+    assert entity.get_entity("Q1") is None
+
+
+def test_list_entities(monkeypatch):
+    monkeypatch.setattr(
+        entity.entity_model,
+        "iter_entities",
+        lambda: iter(
+            [
+                {"id": "Q1", "label": "Apple", "surface_texts": ["Apple"]},
+                {"id": "Q2", "label": "Google", "surface_texts": ["Google"]},
+            ]
+        ),
+    )
+
+    assert entity.list_entities() == [
+        {"entity_id": "Q1", "label": "Apple", "surface_texts": ["Apple"]},
+        {"entity_id": "Q2", "label": "Google", "surface_texts": ["Google"]},
+    ]
+
+
 def test_add_surface_text_success(monkeypatch):
     monkeypatch.setattr(
         entity.entity_model,
         "get_entity",
         lambda _: {
+            "label": "Apple",
             "surface_texts": ["Apple"],
         },
     )
@@ -83,7 +156,11 @@ def test_add_surface_text_success(monkeypatch):
         "Apple Inc",
     )
 
-    assert result["success"]
+    assert result == {
+        "entity_id": "Q1",
+        "label": "Apple",
+        "surface_texts": ["Apple", "Apple Inc"],
+    }
 
     assert updated["texts"] == [
         "Apple",
@@ -98,15 +175,8 @@ def test_add_surface_text_missing_entity(monkeypatch):
         lambda _: None,
     )
 
-    result = entity.add_surface_text(
-        "Q1",
-        "Apple",
-    )
-
-    assert result == {
-        "success": False,
-        "message": "Entity not found",
-    }
+    with pytest.raises(entity.EntityNotFoundError):
+        entity.add_surface_text("Q1", "Apple")
 
 
 def test_add_surface_text_duplicate(monkeypatch):
@@ -114,19 +184,13 @@ def test_add_surface_text_duplicate(monkeypatch):
         entity.entity_model,
         "get_entity",
         lambda _: {
+            "label": "Apple",
             "surface_texts": ["Apple"],
         },
     )
 
-    result = entity.add_surface_text(
-        "Q1",
-        "Apple",
-    )
-
-    assert result == {
-        "success": False,
-        "message": "Already exists",
-    }
+    with pytest.raises(entity.SurfaceTextAlreadyExistsError):
+        entity.add_surface_text("Q1", "Apple")
 
 
 def test_create_fact(monkeypatch):
@@ -135,7 +199,7 @@ def test_create_fact(monkeypatch):
     monkeypatch.setattr(
         entity.entity_model,
         "add_fact",
-        lambda **kwargs: called.update(kwargs),
+        lambda **kwargs: called.update(kwargs) or "fact-42",
     )
 
     result = entity.create_fact(
@@ -145,12 +209,60 @@ def test_create_fact(monkeypatch):
         since=2025,
     )
 
-    assert result == {"success": True}
+    assert result == {
+        "id": "fact-42",
+        "source": "A",
+        "target": "B",
+        "predicate": "KNOWS",
+        "since": 2025,
+    }
 
     assert called["source"] == "A"
     assert called["target"] == "B"
     assert called["predicate"] == "KNOWS"
     assert called["since"] == 2025
+
+
+def test_get_fact_found(monkeypatch):
+    monkeypatch.setattr(
+        entity.entity_model,
+        "get_fact",
+        lambda fact_id: {
+            "id": fact_id,
+            "source": "A",
+            "target": "B",
+            "predicate": "KNOWS",
+        },
+    )
+
+    assert entity.get_fact("fact-1") == {
+        "id": "fact-1",
+        "source": "A",
+        "target": "B",
+        "predicate": "KNOWS",
+    }
+
+
+def test_get_fact_missing(monkeypatch):
+    monkeypatch.setattr(entity.entity_model, "get_fact", lambda fact_id: None)
+
+    assert entity.get_fact("fact-1") is None
+
+
+def test_list_facts(monkeypatch):
+    monkeypatch.setattr(
+        entity.entity_model,
+        "iter_facts",
+        lambda: iter(
+            [
+                {"id": "fact-1", "source": "A", "target": "B", "predicate": "KNOWS"},
+            ]
+        ),
+    )
+
+    assert entity.list_facts() == [
+        {"id": "fact-1", "source": "A", "target": "B", "predicate": "KNOWS"},
+    ]
 
 
 def test_suggestion_parts_tuple():
@@ -170,7 +282,7 @@ def test_resolve_entities_deduplicates_by_entity_id(monkeypatch):
     resolved = entity._resolve_entities([("apple", (1, 0))])
 
     assert resolved == [
-        {"_id": "Q1", "label": "Apple", "surface_text": "apple"},
+        {"entity_id": "Q1", "label": "Apple", "surface_text": "apple"},
     ]
 
 
@@ -218,9 +330,9 @@ def test_get_surface_texts_attaches_entity_id_and_drops_unresolved(monkeypatch):
 
     result = entity.get_surface_texts("apple mango", word_correction=False)
 
-    assert len(result["UniversalEntities"]) == 1
-    assert result["UniversalEntities"][0]["entities"] == [
-        {"_id": "Q1", "label": "Apple", "surface_text": "apple"},
+    assert len(result["universal_entities"]) == 1
+    assert result["universal_entities"][0]["entities"] == [
+        {"entity_id": "Q1", "label": "Apple", "surface_text": "apple"},
     ]
 
 
@@ -287,7 +399,9 @@ def test_find_fuzzy_matches(monkeypatch):
             "surface_text": "myank",
             "corrected_text": "mayank",
             "score": -1,
-            "entities": [{"_id": "Q1", "label": "Mayank", "surface_text": "mayank"}],
+            "entities": [
+                {"entity_id": "Q1", "label": "Mayank", "surface_text": "mayank"}
+            ],
         }
     ]
 
@@ -318,34 +432,42 @@ def test_get_surface_texts_word_correction_flag_gates_fuzzy_matches(monkeypatch)
     )
 
     result_off = entity.get_surface_texts("myank is here", word_correction=False)
-    assert result_off["UniversalEntities"] == []
+    assert result_off["universal_entities"] == []
 
     result_on = entity.get_surface_texts("myank is here", word_correction=True)
-    assert len(result_on["UniversalEntities"]) == 1
-    assert result_on["UniversalEntities"][0]["corrected_text"] == "mayank"
-    assert result_on["UniversalEntities"][0]["entities"] == [
-        {"_id": "Q1", "label": "Mayank", "surface_text": "mayank"}
+    assert len(result_on["universal_entities"]) == 1
+    assert result_on["universal_entities"][0]["corrected_text"] == "mayank"
+    assert result_on["universal_entities"][0]["entities"] == [
+        {"entity_id": "Q1", "label": "Mayank", "surface_text": "mayank"}
     ]
 
-    no_tag_texts = [tag["surface_text"] for tag in result_on["NoTagEntities"]]
+    no_tag_texts = [tag["surface_text"] for tag in result_on["no_tag_entities"]]
     assert "myank" not in no_tag_texts
     assert no_tag_texts == ["is", "here"]
 
 
-def test_create_regex(monkeypatch):
+def test_create_regex_success(monkeypatch):
     called = []
 
+    monkeypatch.setattr(entity.entity_model, "has_entity", lambda entity_id: True)
     monkeypatch.setattr(
         entity.regex_model,
         "add_rule",
         lambda entity_id, regex: called.append((entity_id, regex)),
     )
+    monkeypatch.setattr(entity.regex_model, "save", lambda conn: None)
 
     result = entity.create_regex(
         "Date",
         r"\d{4}",
     )
 
-    assert result == {"success": True}
-
+    assert result == {"entity_id": "Date", "regex": r"\d{4}"}
     assert called == [("Date", r"\d{4}")]
+
+
+def test_create_regex_missing_entity(monkeypatch):
+    monkeypatch.setattr(entity.entity_model, "has_entity", lambda entity_id: False)
+
+    with pytest.raises(entity.EntityNotFoundError):
+        entity.create_regex("Date", r"\d{4}")

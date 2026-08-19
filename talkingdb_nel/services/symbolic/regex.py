@@ -10,7 +10,7 @@ class RegexController:
                 for match in rule.compiled.finditer(input_query):
                     results.append(
                         {
-                            "surfaceText": match.group(),
+                            "surface_text": match.group(),
                             "rule": rule_id,
                             "index": [
                                 match.start(),
