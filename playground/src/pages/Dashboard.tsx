@@ -112,6 +112,13 @@ export default function Dashboard() {
             <section className="card">
               <h3>Entities per namespace</h3>
               <BarChart data={entityChartData} ariaLabel="Entities per namespace" />
+              {stats.length > entityChartData.length && (
+                <p className="muted small">
+                  +{stats.length - entityChartData.length} more namespace
+                  {stats.length - entityChartData.length === 1 ? '' : 's'} not shown - see the list
+                  below.
+                </p>
+              )}
             </section>
             <section className="card">
               <h3>Commit activity (last 14 days)</h3>

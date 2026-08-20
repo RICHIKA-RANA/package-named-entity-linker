@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Command } from 'cmdk'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, FlaskConical, GitCommitHorizontal, Share2, Code2, Sparkles } from 'lucide-react'
+import { LayoutDashboard, FlaskConical, GitCommitHorizontal, Search, Code2, Sparkles } from 'lucide-react'
 import type { Namespace } from '../api'
 
 const VIEW_ICONS = {
   train: Sparkles,
   test: FlaskConical,
   history: GitCommitHorizontal,
-  graph: Share2,
+  inspect: Search,
   code: Code2,
 }
 

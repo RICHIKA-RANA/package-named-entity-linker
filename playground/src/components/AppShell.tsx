@@ -1,9 +1,11 @@
-import { useEffect, useState, type ReactNode } from 'react'
-import { Link, NavLink, useLocation } from 'react-router-dom'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { NavLink, useLocation, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import { LayoutDashboard, Menu, X, Command as CommandIcon } from 'lucide-react'
 import { listNamespaces, type Namespace } from '../api'
+import { PANE_VIEWS, DEFAULT_LEFT_VIEW, normalizeViewKey } from '../pages/paneViews'
 import CommandPalette from './CommandPalette'
+import NamespaceSwitcher from './NamespaceSwitcher'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 
 export default function AppShell({ children }: { children: ReactNode }) {
@@ -11,6 +13,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const isDesktop = useMediaQuery('(min-width: 1024px)')
   const location = useLocation()
+  const [searchParams] = useSearchParams()
+
+  const currentNamespace = useMemo(() => {
+    const match = /^\/namespaces\/([^/]+)/.exec(location.pathname)
+    return match ? decodeURIComponent(match[1]) : null
+  }, [location.pathname])
+
+  const activeView = normalizeViewKey(searchParams.get('left')) ?? DEFAULT_LEFT_VIEW
 
   useEffect(() => {
     listNamespaces()
@@ -23,31 +33,42 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const sidebarContent = (
     <>
       <div className="sidebar-header">
-        <Link to="/" className="sidebar-brand">
+        <NavLink to="/" end className="sidebar-brand">
           <LayoutDashboard size={18} />
           TalkingDB NEL
-        </Link>
+        </NavLink>
       </div>
 
-      <nav className="sidebar-nav">
-        <NavLink to="/" end className="sidebar-link">
-          <LayoutDashboard size={16} />
-          Dashboard
-        </NavLink>
-      </nav>
+      {currentNamespace ? (
+        <>
+          <NamespaceSwitcher namespaces={namespaces} current={currentNamespace} />
 
-      <div className="sidebar-section-label">Namespaces</div>
-      <nav className="sidebar-nav sidebar-namespaces">
-        {namespaces.map((namespace) => (
-          <NavLink
-            key={namespace.name}
-            to={`/namespaces/${encodeURIComponent(namespace.name)}`}
-            className="sidebar-link"
-          >
-            {namespace.name}
+          <div className="sidebar-section-label">Namespace</div>
+          <nav className="sidebar-nav">
+            {PANE_VIEWS.map((view) => (
+              <NavLink
+                key={view.key}
+                to={`/namespaces/${encodeURIComponent(currentNamespace)}?left=${view.key}`}
+                // Every section link shares the same pathname (only `?left=`
+                // differs), so NavLink's own pathname-only isActive would mark
+                // all of them active at once - use a function className to
+                // fully own the active state from our own `left` comparison.
+                className={() => (view.key === activeView ? 'sidebar-link active' : 'sidebar-link')}
+              >
+                <view.icon size={16} />
+                {view.label}
+              </NavLink>
+            ))}
+          </nav>
+        </>
+      ) : (
+        <nav className="sidebar-nav">
+          <NavLink to="/" end className="sidebar-link">
+            <LayoutDashboard size={16} />
+            Dashboard
           </NavLink>
-        ))}
-      </nav>
+        </nav>
+      )}
 
       <button
         type="button"

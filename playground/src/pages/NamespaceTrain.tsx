@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Trash2, Eye } from 'lucide-react'
 import {
   addRegexRule,
@@ -17,9 +18,14 @@ import EntityCombobox from '../components/EntityCombobox'
 import ActionMenu from '../components/ActionMenu'
 import EntityDetailPanel from '../panels/EntityDetailPanel'
 
+function inspectLink(namespace: string, entityId: string) {
+  return `/namespaces/${encodeURIComponent(namespace)}?left=inspect&focus=${encodeURIComponent(entityId)}`
+}
+
 export default function NamespaceTrain() {
   const { namespace } = useNamespaceContext()
   const { showToast } = useToast()
+  const navigate = useNavigate()
 
   const [entities, setEntities] = useState<Entity[]>([])
   const [entitiesLoading, setEntitiesLoading] = useState(true)
@@ -65,7 +71,10 @@ export default function NamespaceTrain() {
         error={entitiesError}
         onCreated={(entity) => {
           setEntities((current) => [entity, ...current])
-          showToast('Entity created')
+          showToast('Entity created', 'success', {
+            label: 'View in Inspect',
+            onClick: () => navigate(inspectLink(namespace, entity.entity_id)),
+          })
         }}
         onSelect={setSelectedEntity}
       />
@@ -86,7 +95,10 @@ export default function NamespaceTrain() {
         error={factsError}
         onCreated={(fact) => {
           setFacts((current) => [fact, ...current])
-          showToast('Fact created')
+          showToast('Fact created', 'success', {
+            label: 'View in Inspect',
+            onClick: () => navigate(inspectLink(namespace, fact.source)),
+          })
         }}
         onDelete={handleDeleteFact}
       />
@@ -255,18 +267,7 @@ function AddSurfaceTextForm({
       <form onSubmit={handleSubmit}>
         <div className="field">
           <label htmlFor="surface-text-entity">Entity</label>
-          <select
-            id="surface-text-entity"
-            value={entityId}
-            onChange={(e) => setEntityId(e.target.value)}
-          >
-            <option value="">Select an entity…</option>
-            {entities.map((entity) => (
-              <option key={entity.entity_id} value={entity.entity_id}>
-                {entity.entity_id}
-              </option>
-            ))}
-          </select>
+          <EntityCombobox entities={entities} value={entityId} onChange={setEntityId} />
         </div>
         <div className="field">
           <label htmlFor="surface-text-value">Surface text</label>
@@ -321,18 +322,7 @@ function AddRegexRuleForm({ entities }: { entities: Entity[] }) {
       <form onSubmit={handleSubmit}>
         <div className="field">
           <label htmlFor="regex-entity">Entity</label>
-          <select
-            id="regex-entity"
-            value={entityId}
-            onChange={(e) => setEntityId(e.target.value)}
-          >
-            <option value="">Select an entity…</option>
-            {entities.map((entity) => (
-              <option key={entity.entity_id} value={entity.entity_id}>
-                {entity.entity_id}
-              </option>
-            ))}
-          </select>
+          <EntityCombobox entities={entities} value={entityId} onChange={setEntityId} />
         </div>
         <div className="field">
           <label htmlFor="regex-pattern">Pattern</label>

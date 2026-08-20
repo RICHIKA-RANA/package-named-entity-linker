@@ -7,11 +7,39 @@ describe('buildSnippets', () => {
   it('returns one entry per core action, each with both js and python', () => {
     const snippets = buildSnippets('acme-corp', BASE_URL)
 
-    expect(snippets).toHaveLength(6)
+    expect(snippets).toHaveLength(24)
     snippets.forEach((snippet) => {
       expect(snippet.js.length).toBeGreaterThan(0)
       expect(snippet.python.length).toBeGreaterThan(0)
     })
+  })
+
+  it('covers every CRUD and eval-harness endpoint added after the original six', () => {
+    const snippets = buildSnippets('acme-corp', BASE_URL)
+    const keys = snippets.map((s) => s.key)
+
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        'update-entity',
+        'delete-entity',
+        'bulk-create-entities',
+        'list-regex-rules',
+        'update-regex-rule',
+        'delete-regex-rule',
+        'update-fact',
+        'delete-fact',
+        'create-test-case',
+        'bulk-create-test-cases',
+        'list-test-cases',
+        'update-test-case',
+        'delete-test-case',
+        'accept-test-case',
+        'reject-test-case',
+        'create-test-run',
+        'list-test-runs',
+        'get-test-run-results',
+      ]),
+    )
   })
 
   it('interpolates the namespace into every generated URL', () => {

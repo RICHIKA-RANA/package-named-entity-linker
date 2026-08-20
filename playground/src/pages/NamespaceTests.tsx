@@ -25,6 +25,7 @@ import HighlightedText from '../components/HighlightedText'
 import type { HighlightSpan } from '../highlight'
 import { computeAccuracyTrend, type AccuracyPoint } from '../charts/accuracyTrend'
 import AccuracyTrendChart from '../charts/AccuracyTrendChart'
+import { buildRunSummary } from '../testRunSummary'
 
 function buildSpans(result: ExtractionResult): HighlightSpan[] {
   return [
@@ -99,6 +100,7 @@ export default function NamespaceTests() {
   const [casesLoading, setCasesLoading] = useState(true)
   const [runs, setRuns] = useState<TestRun[]>([])
   const [trend, setTrend] = useState<AccuracyPoint[]>([])
+  const [runAccuracies, setRunAccuracies] = useState<Record<string, number | null>>({})
   const [latestSummary, setLatestSummary] = useState<TestRunSummary | null>(null)
   const [running, setRunning] = useState(false)
 
@@ -125,6 +127,23 @@ export default function NamespaceTests() {
         }),
       )
       setTrend(computeAccuracyTrend(list, resultsByRun))
+      setRunAccuracies(
+        Object.fromEntries(
+          list.map((run) => [run.id, buildRunSummary(run, resultsByRun[run.id]).accuracy]),
+        ),
+      )
+
+      // list is ordered most-recent-first - populate the summary card from
+      // the latest run on mount, instead of leaving it empty until a fresh
+      // run is triggered in this session.
+      const [mostRecent] = list
+      if (mostRecent) {
+        setLatestSummary((current) =>
+          current?.run.id === mostRecent.id
+            ? current
+            : buildRunSummary(mostRecent, resultsByRun[mostRecent.id]),
+        )
+      }
     } catch {
       // run history is supplementary - failures here don't block the page
     }
@@ -253,11 +272,20 @@ export default function NamespaceTests() {
           <h3>Accuracy trend</h3>
           <AccuracyTrendChart data={trend} />
           <ul className="plain-list">
-            {runs.map((run) => (
-              <li key={run.id}>
-                {new Date(run.created_at).toLocaleString()}
-              </li>
-            ))}
+            {runs.map((run) => {
+              const accuracy = runAccuracies[run.id]
+              return (
+                <li key={run.id}>
+                  {new Date(run.created_at).toLocaleString()}
+                  {' - '}
+                  <span className="muted small">
+                    {accuracy === undefined || accuracy === null
+                      ? 'no graded cases'
+                      : `${Math.round(accuracy * 100)}% accuracy`}
+                  </span>
+                </li>
+              )
+            })}
           </ul>
         </section>
       )}
@@ -272,8 +300,12 @@ export default function NamespaceTests() {
               <div>
                 <span>{testCase.message_text}</span>{' '}
                 <span className="muted small">
-                  {testCase.expected ? `${testCase.expected.length} expected` : 'unlabeled'} -{' '}
-                  {testCase.review_status}
+                  {testCase.expected === null
+                    ? 'unlabeled'
+                    : testCase.expected.length === 0
+                      ? 'expects no links'
+                      : `${testCase.expected.length} expected`}{' '}
+                  - {testCase.review_status}
                 </span>
               </div>
               <ActionMenu
