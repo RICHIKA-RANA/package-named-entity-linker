@@ -38,6 +38,20 @@ TalkingDB Named Entity Linker (NEL) identifies named entities in text and resolv
     <img src="docs/images/architecture.png" width="90%" alt="Architecture">
 </p>
 
+### System Context (C4)
+
+```mermaid
+C4Context
+  title System Context — TalkingDB Named Entity Linker
+
+  Person(trainer, "ML Engineer / Trainer", "Trains and tests entity linking")
+  System(nel, "Named Entity Linker", "FastAPI service + Playground SPA, served as one deployable unit")
+
+  Rel(trainer, nel, "Trains, tests, and inspects namespaces via", "HTTPS, browser")
+```
+
+See [`docs/architecture/`](docs/architecture/README.md) for the Container and Component-level views, and [`docs/adrs/`](docs/adrs/README.md) for the reasoning behind them.
+
 ## API
 
 <p align="center">
