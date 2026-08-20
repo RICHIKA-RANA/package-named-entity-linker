@@ -1,14 +1,24 @@
-import { useEffect, useState, Suspense } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { useEffect, useState, Suspense, type FormEvent } from 'react'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Group, Panel, Separator, type Layout } from 'react-resizable-panels'
 import { motion } from 'motion/react'
-import { X, SplitSquareHorizontal } from 'lucide-react'
-import { getNamespace, type Namespace } from '../api'
+import { X, SplitSquareHorizontal, GitCommitHorizontal, Pencil, Trash2 } from 'lucide-react'
+import {
+  ApiError,
+  commitNamespace,
+  deleteNamespace,
+  getNamespace,
+  updateNamespace,
+  type Namespace,
+} from '../api'
 import { NamespaceProvider } from './namespaceContext'
+import { useToast } from '../components/toastContext'
+import Modal from '../components/Modal'
+import ActionMenu from '../components/ActionMenu'
 import {
   PANE_VIEWS,
   getPaneView,
-  isViewKey,
+  normalizeViewKey,
   otherDefaultView,
   DEFAULT_LEFT_VIEW,
   type ViewKey,
@@ -30,10 +40,10 @@ function loadStoredState(namespace: string): StoredWorkspaceState | null {
     if (!raw) return null
 
     const parsed = JSON.parse(raw)
-    if (!isViewKey(parsed.left)) return null
-    if (parsed.right !== null && !isViewKey(parsed.right)) return null
+    const left = normalizeViewKey(parsed.left)
+    if (!left) return null
 
-    return { left: parsed.left, right: parsed.right, layout: parsed.layout }
+    return { left, right: normalizeViewKey(parsed.right), layout: parsed.layout }
   } catch {
     return null
   }
@@ -45,24 +55,34 @@ function NamespaceWorkspaceInner({ name }: { name: string }) {
   const [loading, setLoading] = useState(true)
   const [searchParams, setSearchParams] = useSearchParams()
   const isWideEnough = useMediaQuery('(min-width: 900px)')
+  const navigate = useNavigate()
+  const { showToast } = useToast()
 
   const [storedLayout, setStoredLayout] = useState<Layout | undefined>(
     () => loadStoredState(name)?.layout,
   )
+  const [commitOpen, setCommitOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
-  const [paneState, setPaneState] = useState<PaneState>(() => {
-    const left = searchParams.get('left')
-    const right = searchParams.get('right')
+  // Bootstrap the URL from persisted layout the first time this namespace is
+  // opened with no view params at all (e.g. a bare namespace link). Once the
+  // URL carries a `left` param, every render derives view state from it
+  // directly - single source of truth, so sidebar links, cross-pane links,
+  // and browser back/forward all just work.
+  useEffect(() => {
+    if (normalizeViewKey(searchParams.get('left'))) return
+
     const stored = loadStoredState(name)
+    const params: Record<string, string> = { left: stored?.left ?? DEFAULT_LEFT_VIEW }
+    if (stored?.right) params.right = stored.right
+    setSearchParams(params, { replace: true })
+    // Bootstrap only - runs again if the namespace itself changes (new key from parent).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name])
 
-    if (isViewKey(left)) {
-      return { left, right: isViewKey(right) ? right : null }
-    }
-
-    if (stored) return { left: stored.left, right: stored.right }
-
-    return { left: DEFAULT_LEFT_VIEW, right: null }
-  })
+  const left = normalizeViewKey(searchParams.get('left')) ?? DEFAULT_LEFT_VIEW
+  const right = normalizeViewKey(searchParams.get('right'))
 
   useEffect(() => {
     getNamespace(name)
@@ -74,31 +94,54 @@ function NamespaceWorkspaceInner({ name }: { name: string }) {
   }, [name])
 
   useEffect(() => {
-    const stored: StoredWorkspaceState = { ...paneState, layout: storedLayout }
+    const stored: StoredWorkspaceState = { left, right, layout: storedLayout }
     localStorage.setItem(`pane-state:${name}`, JSON.stringify(stored))
-
-    const params: Record<string, string> = { left: paneState.left }
-    if (paneState.right) params.right = paneState.right
-    setSearchParams(params, { replace: true })
-  }, [paneState, storedLayout, name, setSearchParams])
+  }, [left, right, storedLayout, name])
 
   function handleLayoutChanged(layout: Layout) {
     setStoredLayout(layout)
   }
 
+  function updateViews(next: { left?: ViewKey; right?: ViewKey | null }) {
+    setSearchParams((current) => {
+      const params = new URLSearchParams(current)
+      if (next.left) params.set('left', next.left)
+      if (next.right === null) params.delete('right')
+      else if (next.right) params.set('right', next.right)
+      return params
+    })
+  }
+
   function handleSplit() {
-    setPaneState((current) => ({
-      ...current,
-      right: current.right ?? otherDefaultView(current.left),
-    }))
+    if (right) return
+    updateViews({ right: otherDefaultView(left) })
   }
 
   function handleCloseSplit() {
-    setPaneState((current) => ({ left: current.left, right: null }))
+    updateViews({ right: null })
   }
 
   function handleSelectView(pane: 'left' | 'right', view: ViewKey) {
-    setPaneState((current) => ({ ...current, [pane]: view }))
+    updateViews(pane === 'left' ? { left: view } : { right: view })
+  }
+
+  async function handleCommit(message: string) {
+    await commitNamespace(name, message)
+    showToast('Committed current state')
+    setCommitOpen(false)
+  }
+
+  async function handleUpdateDescription(description: string | null) {
+    const updated = await updateNamespace(name, description)
+    setNamespace(updated)
+    showToast('Namespace updated')
+    setEditOpen(false)
+  }
+
+  async function handleDeleteNamespace() {
+    await deleteNamespace(name)
+    showToast('Namespace deleted')
+    navigate('/')
   }
 
   const orientation = isWideEnough ? 'horizontal' : 'vertical'
@@ -115,42 +158,81 @@ function NamespaceWorkspaceInner({ name }: { name: string }) {
       {namespace && (
         <>
           <div className="workspace-header">
-            <h2>{namespace.name}</h2>
-            {namespace.description && <p className="muted">{namespace.description}</p>}
+            <div>
+              <h2>{namespace.name}</h2>
+              {namespace.description && <p className="muted">{namespace.description}</p>}
+            </div>
+            <div className="workspace-actions">
+              <button type="button" onClick={() => setCommitOpen(true)}>
+                <GitCommitHorizontal size={14} />
+                Commit
+              </button>
+              {!right && (
+                <button type="button" className="secondary" onClick={handleSplit}>
+                  <SplitSquareHorizontal size={14} />
+                  Split view
+                </button>
+              )}
+              <ActionMenu
+                items={[
+                  { label: 'Edit description', icon: Pencil, onClick: () => setEditOpen(true) },
+                  {
+                    label: 'Delete namespace',
+                    icon: Trash2,
+                    destructive: true,
+                    onClick: () => setDeleteOpen(true),
+                  },
+                ]}
+              />
+            </div>
           </div>
 
           <Group
-            key={paneState.right ? 'split' : 'single'}
+            key={right ? 'split' : 'single'}
             orientation={orientation}
             className={`pane-group pane-group-${orientation}`}
             defaultLayout={storedLayout}
             onLayoutChanged={handleLayoutChanged}
           >
             <Panel id="left" minSize="20" className="pane">
-              <PaneHeader
-                current={paneState.left}
-                onSelect={(view) => handleSelectView('left', view)}
-                onSplit={paneState.right ? undefined : handleSplit}
-              />
-              <PaneContent namespace={name} view={paneState.left} />
+              <PaneHeader current={left} />
+              <PaneContent namespace={name} view={left} />
             </Panel>
 
-            {paneState.right && (
+            {right && (
               <>
                 <Separator className="resize-handle" />
                 <Panel id="right" minSize="20" className="pane">
                   <PaneHeader
-                    current={paneState.right}
+                    current={right}
                     onSelect={(view) => handleSelectView('right', view)}
                     onClose={handleCloseSplit}
                   />
-                  <PaneContent namespace={name} view={paneState.right} />
+                  <PaneContent namespace={name} view={right} />
                 </Panel>
               </>
             )}
           </Group>
         </>
       )}
+
+      <CommitModal open={commitOpen} onOpenChange={setCommitOpen} onCommit={handleCommit} />
+
+      <EditDescriptionModal
+        open={editOpen}
+        initialDescription={namespace?.description ?? ''}
+        onOpenChange={setEditOpen}
+        onSave={handleUpdateDescription}
+      />
+
+      <Modal
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={`Delete ${name}`}
+        description="This permanently deletes every entity, fact, regex rule, and commit in this namespace. This cannot be undone."
+      >
+        <DeleteConfirmForm name={name} onDelete={handleDeleteNamespace} />
+      </Modal>
     </section>
   )
 }
@@ -158,41 +240,37 @@ function NamespaceWorkspaceInner({ name }: { name: string }) {
 function PaneHeader({
   current,
   onSelect,
-  onSplit,
   onClose,
 }: {
   current: ViewKey
-  onSelect: (view: ViewKey) => void
-  onSplit?: () => void
+  onSelect?: (view: ViewKey) => void
   onClose?: () => void
 }) {
+  const view = getPaneView(current)
+
   return (
     <div className="pane-header">
-      <div className="pane-tabs">
-        {PANE_VIEWS.map((view) => (
-          <button
-            key={view.key}
-            type="button"
-            className={view.key === current ? 'pane-tab active' : 'pane-tab'}
-            onClick={() => onSelect(view.key)}
-          >
-            <view.icon size={14} />
-            {view.label}
-          </button>
-        ))}
-      </div>
+      {onSelect ? (
+        <div className="pane-tabs">
+          {PANE_VIEWS.map((candidate) => (
+            <button
+              key={candidate.key}
+              type="button"
+              className={candidate.key === current ? 'pane-tab active' : 'pane-tab'}
+              onClick={() => onSelect(candidate.key)}
+            >
+              <candidate.icon size={14} />
+              {candidate.label}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="pane-static-label">
+          <view.icon size={14} />
+          {view.label}
+        </div>
+      )}
       <div className="pane-actions">
-        {onSplit && (
-          <button
-            type="button"
-            className="icon-button"
-            onClick={onSplit}
-            aria-label="Split view"
-            title="Split view"
-          >
-            <SplitSquareHorizontal size={16} />
-          </button>
-        )}
         {onClose && (
           <button
             type="button"
@@ -227,6 +305,159 @@ function PaneContent({ namespace, view }: { namespace: string; view: ViewKey }) 
         </Suspense>
       </NamespaceProvider>
     </div>
+  )
+}
+
+function CommitModal({
+  open,
+  onOpenChange,
+  onCommit,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onCommit: (message: string) => Promise<void>
+}) {
+  const [message, setMessage] = useState('')
+  const [formError, setFormError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault()
+    setFormError(null)
+
+    if (!message.trim()) {
+      setFormError('Enter a commit message')
+      return
+    }
+
+    setSubmitting(true)
+
+    try {
+      await onCommit(message.trim())
+      setMessage('')
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Failed to commit')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <Modal open={open} onOpenChange={onOpenChange} title="Commit current state">
+      <form onSubmit={handleSubmit}>
+        <div className="field">
+          <label htmlFor="workspace-commit-message">Message</label>
+          <input
+            id="workspace-commit-message"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Add mayank entity and greeting facts"
+            autoFocus
+          />
+        </div>
+        {formError && <p className="error">{formError}</p>}
+        <button type="submit" disabled={submitting}>
+          {submitting ? 'Committing…' : 'Commit current state'}
+        </button>
+      </form>
+    </Modal>
+  )
+}
+
+function EditDescriptionModal({
+  open,
+  initialDescription,
+  onOpenChange,
+  onSave,
+}: {
+  open: boolean
+  initialDescription: string
+  onOpenChange: (open: boolean) => void
+  onSave: (description: string | null) => Promise<void>
+}) {
+  const [description, setDescription] = useState(initialDescription)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault()
+    setSaving(true)
+    setFormError(null)
+
+    try {
+      await onSave(description.trim() || null)
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Failed to update namespace')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Modal open={open} onOpenChange={onOpenChange} title="Edit description">
+      <form onSubmit={handleSubmit}>
+        <div className="field">
+          <label htmlFor="workspace-edit-description">Description</label>
+          <input
+            id="workspace-edit-description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            autoFocus
+          />
+        </div>
+        {formError && <p className="error">{formError}</p>}
+        <button type="submit" disabled={saving}>
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+      </form>
+    </Modal>
+  )
+}
+
+function DeleteConfirmForm({ name, onDelete }: { name: string; onDelete: () => Promise<void> }) {
+  const [confirmText, setConfirmText] = useState('')
+  const [formError, setFormError] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault()
+
+    if (confirmText !== name) {
+      setFormError('Type the namespace name exactly to confirm')
+      return
+    }
+
+    setDeleting(true)
+    setFormError(null)
+
+    try {
+      await onDelete()
+    } catch (err) {
+      setFormError(
+        err instanceof ApiError ? err.message : 'Failed to delete namespace',
+      )
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="field">
+        <label htmlFor="workspace-confirm-delete-name">
+          Type <strong>{name}</strong> to confirm
+        </label>
+        <input
+          id="workspace-confirm-delete-name"
+          value={confirmText}
+          onChange={(e) => setConfirmText(e.target.value)}
+          autoFocus
+        />
+      </div>
+      {formError && <p className="error">{formError}</p>}
+      <button type="submit" className="destructive" disabled={deleting}>
+        {deleting ? 'Deleting…' : 'Delete namespace'}
+      </button>
+    </form>
   )
 }
 

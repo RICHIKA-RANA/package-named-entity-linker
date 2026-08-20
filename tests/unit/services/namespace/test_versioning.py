@@ -107,7 +107,7 @@ def test_rollback_restores_prior_entity_state(bundle, fake_registry):
 
     assert not bundle.entity_model.has_entity("Q2")
     assert bundle.entity_model.has_entity("Q1")
-    assert rollback_commit["message"] == f"Rollback to {first_commit['commit_id']}"
+    assert rollback_commit["message"] == f"Rollback to {first_commit['commit_id'][:8]}"
 
     # dictionary rebuilt from scratch: satyam should no longer resolve,
     # mayank should still resolve at distance 0 (regression test for the

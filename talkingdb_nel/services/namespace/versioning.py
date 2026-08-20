@@ -111,7 +111,7 @@ def rollback_namespace(bundle: NamespaceBundle, commit_id: str) -> dict:
     _restore_regex(bundle, snapshot["regex_rules"])
     rebuild_dictionary(bundle)
 
-    result = commit_namespace(bundle, f"Rollback to {commit_id}")
+    result = commit_namespace(bundle, f"Rollback to {commit_id[:8]}")
 
     # Word/phrase matchers cache longest-word metadata that only grows;
     # evict so the next access rebuilds fresh matchers against the
