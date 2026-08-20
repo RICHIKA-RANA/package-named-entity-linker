@@ -58,7 +58,7 @@ def _restore_regex(bundle: NamespaceBundle, regex_snapshot: dict) -> None:
     bundle.regex_model.save(bundle.regex_conn)
 
 
-def _rebuild_dictionary(bundle: NamespaceBundle) -> None:
+def rebuild_dictionary(bundle: NamespaceBundle) -> None:
     bundle.dictionary.clear()
 
     # clear() wipes the persisted longest-word metadata, but the matcher
@@ -78,6 +78,27 @@ def _rebuild_dictionary(bundle: NamespaceBundle) -> None:
         )
 
 
+def purge_namespace_data(bundle: NamespaceBundle) -> None:
+    """
+    Wipes every entity/fact, regex rule, and fuzzy-dictionary row for this
+    namespace, then its namespace/commit rows, then evicts the cached
+    bundle. Used when deleting a namespace outright (not a training
+    rollback, which is non-destructive by design).
+    """
+
+    bundle.entity_model.clear()
+    bundle.entity_model.save(bundle.entity_conn)
+
+    bundle.regex_model.clear()
+    bundle.regex_model.save(bundle.regex_conn)
+
+    bundle.dictionary.clear()
+
+    store.delete_namespace(bundle.entity_conn, bundle.namespace)
+
+    namespace_registry.evict(bundle.namespace)
+
+
 def rollback_namespace(bundle: NamespaceBundle, commit_id: str) -> dict:
     commit = store.get_commit(bundle.entity_conn, bundle.namespace, commit_id)
 
@@ -88,7 +109,7 @@ def rollback_namespace(bundle: NamespaceBundle, commit_id: str) -> dict:
 
     _restore_entities(bundle, snapshot["entities"])
     _restore_regex(bundle, snapshot["regex_rules"])
-    _rebuild_dictionary(bundle)
+    rebuild_dictionary(bundle)
 
     result = commit_namespace(bundle, f"Rollback to {commit_id}")
 

@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -7,12 +7,19 @@ from talkingdb_nel.api.dependencies import get_namespace_bundle
 from talkingdb_nel.services.entity.entity import (
     EntityAlreadyExistsError,
     EntityNotFoundError,
+    RegexRuleNotFoundError,
     SurfaceTextAlreadyExistsError,
     add_surface_text,
+    bulk_create_entities,
     create_entity,
     create_regex,
+    delete_entity,
+    delete_regex_rule,
     get_entity,
     list_entities,
+    list_regex_rules,
+    update_entity,
+    update_regex_rule,
 )
 from talkingdb_nel.services.namespace.registry import NamespaceBundle
 
@@ -42,6 +49,15 @@ class EntityResponse(BaseModel):
     )
 
 
+class EntityUpdateRequest(BaseModel):
+    label: Optional[str] = Field(
+        None, description="New label. Omit to leave unchanged."
+    )
+    surface_texts: Optional[List[str]] = Field(
+        None, description="Replace the full surface-text list. Omit to leave unchanged."
+    )
+
+
 class SurfaceTextAddRequest(BaseModel):
     surface_text: str = Field(..., description="Surface text to add to the entity.")
 
@@ -53,6 +69,27 @@ class RegexRuleCreateRequest(BaseModel):
 class RegexRuleResponse(BaseModel):
     entity_id: str = Field(..., description="Entity this rule was added to.")
     regex: str = Field(..., description="Regular expression pattern.")
+
+
+class BulkUploadRequest(BaseModel):
+    format: str = Field(..., description="'csv' or 'json'.")
+    content: str = Field(..., description="Raw file content.")
+
+
+class BulkUploadResponse(BaseModel):
+    created: int = Field(..., description="Number of entities created.")
+    errors: List[Dict[str, Any]] = Field(
+        default_factory=list, description="Per-row errors, if any."
+    )
+
+
+class RegexRuleDeleteRequest(BaseModel):
+    regex: str = Field(..., description="Exact pattern to delete.")
+
+
+class RegexRuleUpdateRequest(BaseModel):
+    old_regex: str = Field(..., description="Exact pattern to replace.")
+    new_regex: str = Field(..., description="Replacement pattern.")
 
 
 @router.post(
@@ -81,6 +118,24 @@ def create_new_entity(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Entity '{exc}' already exists",
         ) from exc
+
+
+@router.post(
+    "/bulk",
+    response_model=BulkUploadResponse,
+    summary="Bulk-create entities",
+    description=(
+        "Creates many entities from CSV or JSON content (columns/fields: "
+        "entity_id, label, surface_texts - pipe-separated in CSV, an "
+        "array in JSON). Per-row errors (e.g. duplicate entity_id) are "
+        "collected rather than failing the whole upload."
+    ),
+)
+def bulk_upload_entities(
+    payload: BulkUploadRequest,
+    bundle: NamespaceBundle = Depends(get_namespace_bundle),
+) -> BulkUploadResponse:
+    return bulk_create_entities(bundle, payload.format, payload.content)
 
 
 @router.get(
@@ -114,6 +169,56 @@ def get_entity_by_id(
         )
 
     return result
+
+
+@router.patch(
+    "/{entity_id}",
+    response_model=EntityResponse,
+    summary="Update an entity",
+    description=(
+        "Updates an entity's label and/or its full surface-text list. "
+        "404 if the entity doesn't exist."
+    ),
+)
+def update_entity_by_id(
+    entity_id: str,
+    payload: EntityUpdateRequest,
+    bundle: NamespaceBundle = Depends(get_namespace_bundle),
+) -> EntityResponse:
+    try:
+        return update_entity(
+            bundle,
+            entity_id=entity_id,
+            label=payload.label,
+            surface_texts=payload.surface_texts,
+        )
+    except EntityNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Entity '{exc}' not found",
+        ) from exc
+
+
+@router.delete(
+    "/{entity_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete an entity",
+    description=(
+        "Permanently deletes an entity and every fact referencing it. "
+        "404 if the entity doesn't exist."
+    ),
+)
+def delete_entity_by_id(
+    entity_id: str,
+    bundle: NamespaceBundle = Depends(get_namespace_bundle),
+) -> None:
+    try:
+        delete_entity(bundle, entity_id=entity_id)
+    except EntityNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Entity '{exc}' not found",
+        ) from exc
 
 
 @router.post(
@@ -171,4 +276,75 @@ def add_entity_regex_rule(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Entity '{exc}' not found",
+        ) from exc
+
+
+@router.get(
+    "/{entity_id}/regex-rules",
+    response_model=List[str],
+    summary="List an entity's regex rules",
+    description="Returns every regex pattern registered for this entity.",
+)
+def get_entity_regex_rules(
+    entity_id: str,
+    bundle: NamespaceBundle = Depends(get_namespace_bundle),
+) -> List[str]:
+    try:
+        return list_regex_rules(bundle, entity_id=entity_id)
+    except EntityNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Entity '{exc}' not found",
+        ) from exc
+
+
+@router.patch(
+    "/{entity_id}/regex-rules",
+    response_model=RegexRuleResponse,
+    summary="Replace a regex rule",
+    description=(
+        "Replaces one existing pattern with a new one. 404 if the old "
+        "pattern doesn't exist for this entity."
+    ),
+)
+def update_entity_regex_rule(
+    entity_id: str,
+    payload: RegexRuleUpdateRequest,
+    bundle: NamespaceBundle = Depends(get_namespace_bundle),
+) -> RegexRuleResponse:
+    try:
+        return update_regex_rule(
+            bundle,
+            entity_id=entity_id,
+            old_pattern=payload.old_regex,
+            new_pattern=payload.new_regex,
+        )
+    except RegexRuleNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Regex pattern '{exc}' not found",
+        ) from exc
+
+
+@router.delete(
+    "/{entity_id}/regex-rules",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a regex rule",
+    description=(
+        "Deletes one specific pattern (identified by an exact match in "
+        "the request body, not the URL, since a pattern may contain "
+        "'/'). 404 if it doesn't exist for this entity."
+    ),
+)
+def delete_entity_regex_rule(
+    entity_id: str,
+    payload: RegexRuleDeleteRequest,
+    bundle: NamespaceBundle = Depends(get_namespace_bundle),
+) -> None:
+    try:
+        delete_regex_rule(bundle, entity_id=entity_id, pattern=payload.regex)
+    except RegexRuleNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Regex pattern '{exc}' not found",
         ) from exc

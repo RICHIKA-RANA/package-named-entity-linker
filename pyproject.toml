@@ -1,6 +1,6 @@
 [project]
 name = "package-named-entity-linker"
-version = "6.0.0"
+version = "6.1.0"
 description = "Links detected named entities in text to their corresponding canonical entities in a knowledge base for accurate identification and disambiguation."
 authors = [
     { name = "immkg", email = "mayank.g@smarter.codes" }
@@ -23,9 +23,9 @@ debugpy = ">=1.8.19,<2.0.0"
 redis = "^7.4.0"
 networkx = "^3.6.1"
 
-talkingdb-models = { git = "git+https://github.com/TalkingDB/base-tdb-models.git", rev = "0943bf72dcdb83402ec639687db6fe104cc54c1d" }
+talkingdb-models = { git = "git+https://github.com/TalkingDB/base-tdb-models.git", rev = "9567ddad4bbb9a4306f733be8afde6f790a19684" }
 talkingdb-clients = { git = "git+https://github.com/TalkingDB/base-tdb-clients.git", rev = "9931c1f832d4772f5137cdc4bb193daadab2ad30" }
-talkingdb-helpers = { git = "git+https://github.com/TalkingDB/base-tdb-helpers.git", rev = "2f570ddae41d01ffec249664860b9b7878d6d714" }
+talkingdb-helpers = { git = "git+https://github.com/TalkingDB/base-tdb-helpers.git", rev = "729a7b052b721c14801071faa7e3324bf4a0bd49" }
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4"

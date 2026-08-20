@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from talkingdb_nel import __version__
-from talkingdb_nel.api import entities, extraction, facts, namespaces
+from talkingdb_nel.api import entities, extraction, facts, namespaces, testsuite
 
 DESCRIPTION_FILE = Path(__file__).parent / "DESCRIPTION.md"
 
@@ -28,6 +28,12 @@ OPENAPI_TAGS = [
     {
         "name": "Extraction",
         "description": "Extracting and linking entities from free text.",
+    },
+    {
+        "name": "Test Suite",
+        "description": (
+            "Regression test cases and accuracy runs for validating training."
+        ),
     },
 ]
 
@@ -53,6 +59,7 @@ app.include_router(namespaces.router)
 app.include_router(entities.router)
 app.include_router(facts.router)
 app.include_router(extraction.router)
+app.include_router(testsuite.router)
 
 
 def mount_playground(app: FastAPI, dist_dir: Path) -> None:

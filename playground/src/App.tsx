@@ -1,33 +1,32 @@
-import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom'
-import NamespaceList from './pages/NamespaceList'
-import NamespaceLayout from './pages/NamespaceLayout'
-import NamespaceTrain from './pages/NamespaceTrain'
-import NamespaceTest from './pages/NamespaceTest'
-import NamespaceHistory from './pages/NamespaceHistory'
-import NamespaceGraph from './pages/NamespaceGraph'
-import NamespaceCode from './pages/NamespaceCode'
+import { BrowserRouter, Navigate, Routes, Route, useParams } from 'react-router-dom'
+import AppShell from './components/AppShell'
+import ToastProvider from './components/ToastProvider'
+import Dashboard from './pages/Dashboard'
+import NamespaceWorkspace from './pages/NamespaceWorkspace'
+import { isViewKey } from './pages/paneViews'
+
+function LegacyViewRedirect() {
+  const { name, view } = useParams<{ name: string; view: string }>()
+
+  if (!name) return <Navigate to="/" replace />
+
+  const left = isViewKey(view) ? view : 'train'
+
+  return <Navigate to={`/namespaces/${encodeURIComponent(name)}?left=${left}`} replace />
+}
 
 function App() {
   return (
     <BrowserRouter>
-      <div className="app">
-        <header className="app-header">
-          <h1>TalkingDB NEL Playground</h1>
-        </header>
-        <main className="app-main">
+      <ToastProvider>
+        <AppShell>
           <Routes>
-            <Route path="/" element={<NamespaceList />} />
-            <Route path="/namespaces/:name" element={<NamespaceLayout />}>
-              <Route index element={<Navigate to="train" replace />} />
-              <Route path="train" element={<NamespaceTrain />} />
-              <Route path="test" element={<NamespaceTest />} />
-              <Route path="history" element={<NamespaceHistory />} />
-              <Route path="graph" element={<NamespaceGraph />} />
-              <Route path="code" element={<NamespaceCode />} />
-            </Route>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/namespaces/:name" element={<NamespaceWorkspace />} />
+            <Route path="/namespaces/:name/:view" element={<LegacyViewRedirect />} />
           </Routes>
-        </main>
-      </div>
+        </AppShell>
+      </ToastProvider>
     </BrowserRouter>
   )
 }

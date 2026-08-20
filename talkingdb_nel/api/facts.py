@@ -1,10 +1,17 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from talkingdb_nel.api.dependencies import get_namespace_bundle
-from talkingdb_nel.services.entity.entity import create_fact, get_fact, list_facts
+from talkingdb_nel.services.entity.entity import (
+    FactNotFoundError,
+    create_fact,
+    delete_fact,
+    get_fact,
+    list_facts,
+    update_fact,
+)
 from talkingdb_nel.services.namespace.registry import NamespaceBundle
 
 router = APIRouter(
@@ -33,6 +40,15 @@ class FactResponse(BaseModel):
     target: str = Field(..., description="entity_id of the fact's target entity.")
     predicate: str = Field(
         ..., description="Relationship type connecting source and target."
+    )
+
+
+class FactUpdateRequest(BaseModel):
+    predicate: Optional[str] = Field(
+        None, description="New predicate. Omit to leave unchanged."
+    )
+    attributes: Optional[Dict[str, Any]] = Field(
+        None, description="Replace all attributes. Omit to leave unchanged."
     )
 
 
@@ -87,3 +103,49 @@ def get_fact_by_id(
         )
 
     return result
+
+
+@router.patch(
+    "/{fact_id}",
+    response_model=FactResponse,
+    summary="Update a fact",
+    description=(
+        "Updates a fact's predicate and/or attributes. 404 if it doesn't exist."
+    ),
+)
+def update_fact_by_id(
+    fact_id: str,
+    payload: FactUpdateRequest,
+    bundle: NamespaceBundle = Depends(get_namespace_bundle),
+) -> FactResponse:
+    try:
+        return update_fact(
+            bundle,
+            fact_id=fact_id,
+            predicate=payload.predicate,
+            attributes=payload.attributes,
+        )
+    except FactNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Fact '{exc}' not found",
+        ) from exc
+
+
+@router.delete(
+    "/{fact_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a fact",
+    description="Permanently deletes a fact. 404 if it doesn't exist.",
+)
+def delete_fact_by_id(
+    fact_id: str,
+    bundle: NamespaceBundle = Depends(get_namespace_bundle),
+) -> None:
+    try:
+        delete_fact(bundle, fact_id=fact_id)
+    except FactNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Fact '{exc}' not found",
+        ) from exc

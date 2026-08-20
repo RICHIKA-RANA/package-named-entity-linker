@@ -139,3 +139,18 @@ def test_rollback_is_non_destructive_to_history(bundle):
 def test_rollback_missing_commit_raises(bundle):
     with pytest.raises(store.CommitNotFoundError):
         versioning.rollback_namespace(bundle, "nonexistent")
+
+
+def test_purge_namespace_data_wipes_everything(bundle, fake_registry):
+    store.create_namespace(bundle.entity_conn, "versioning-test")
+    create_entity(bundle, "Q1", label="Mayank", surface_texts=["mayank"])
+    create_regex(bundle, "Q1", r"\d{4}")
+    versioning.commit_namespace(bundle, "initial")
+
+    versioning.purge_namespace_data(bundle)
+
+    assert store.namespace_exists(bundle.entity_conn, "versioning-test") is False
+    assert store.list_commits(bundle.entity_conn, "versioning-test") == []
+    assert not bundle.entity_model.has_entity("Q1")
+    assert bundle.regex_model.rules == {}
+    assert fake_registry.evicted == ["versioning-test"]

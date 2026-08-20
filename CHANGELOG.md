@@ -4,6 +4,19 @@ All notable changes to this project are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [6.1.0] - Full CRUD, training/evaluation harness, production-grade playground UI
+
+A major playground upgrade: real delete/edit support across the board, a bulk-upload/regression-testing workflow for validating training changes, and a full visual/interaction overhaul (app shell, dashboard, resizable split-pane workspace, contextual side panels, command palette). Purely additive at the API level - no existing endpoint's behavior changed.
+
+### Added
+
+- **Delete + edit for namespaces, entities, facts, and regex rules.** `PATCH`/`DELETE /api/namespaces/{namespace}`, `PATCH`/`DELETE .../entities/{entity_id}`, `PATCH`/`DELETE .../facts/{fact_id}`, and the first read/write/delete endpoints for a single regex pattern (`GET`/`PATCH`/`DELETE .../entities/{entity_id}/regex-rules` - previously regex rules could only be added, never listed or removed individually). Deleting a namespace wipes every entity/fact/regex/dictionary row it owns; editing or deleting an entity reindexes the fuzzy-match dictionary (it has no incremental removal, so this replays the same full-rebuild approach already used after a rollback).
+- **Bulk upload.** `POST /api/namespaces/{namespace}/entities/bulk` and `POST .../test-cases/bulk` accept CSV or JSON content and create many rows in one call, collecting per-row errors instead of failing the whole batch.
+- **Training/evaluation harness.** New `test_cases`/`test_runs`/`test_run_results` tables and endpoints (`POST`/`GET`/`PATCH`/`DELETE .../test-cases`, `.../test-cases/{id}/accept`, `.../test-cases/{id}/reject`, `POST`/`GET .../test-runs`, `GET .../test-runs/{run_id}`) - upload or add test queries (with or without a known-correct result), run them against the live extraction pipeline, and get each case labeled relative to its previous run (`pass`/`regression`/`fixed`/`fail`/`new`/`needs_review`) plus an overall accuracy score.
+- **Playground UI overhaul**: a persistent app shell (sidebar + Cmd+K command palette), a Dashboard replacing the plain namespace list (KPIs, D3 charts, namespace management), a resizable split-pane workspace (any two of Train/Tests/History/Graph/Code side by side, persisted per namespace), contextual slide-in panels for entity and commit detail, and the Tests tab rebuilt around the new evaluation harness.
+
+This required a small prep addition to the `talkingdb-models` dependency: `EntityModel.remove_entity`/`remove_fact`/`update_label` and `RegexModel.remove_pattern`.
+
 ## [6.0.0] - Playground UI shell + /api prefix (breaking)
 
 Phase 2 of the training playground: a Vite + React app (`playground/`) served by FastAPI itself, visible at `/`. This release lists/creates namespaces and links into a (currently stub) namespace detail page - training/testing/history/graph screens are still to come.

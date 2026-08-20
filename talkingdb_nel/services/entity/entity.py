@@ -1,3 +1,4 @@
+from talkingdb_nel.services.bulk import parse_bulk_rows
 from talkingdb_nel.services.namespace.registry import NamespaceBundle
 from talkingdb_nel.services.symbolic.notag import NoTag
 
@@ -12,6 +13,14 @@ class EntityAlreadyExistsError(Exception):
 
 class SurfaceTextAlreadyExistsError(Exception):
     """Raised when adding a surface text an entity already has."""
+
+
+class FactNotFoundError(Exception):
+    """Raised when a referenced fact_id does not exist."""
+
+
+class RegexRuleNotFoundError(Exception):
+    """Raised when a referenced regex pattern does not exist for an entity."""
 
 
 def index_entity(bundle: NamespaceBundle, entity: dict):
@@ -45,6 +54,42 @@ def create_entity(
         "label": resolved_label,
         "surface_texts": surface_texts,
     }
+
+
+def bulk_create_entities(bundle: NamespaceBundle, format: str, content: str) -> dict:
+    rows = parse_bulk_rows(format, content)
+
+    created = 0
+    errors = []
+
+    for index, row in enumerate(rows):
+        try:
+            entity_id = row["entity_id"]
+            label = row.get("label") or None
+            surface_texts_raw = row.get("surface_texts") or []
+
+            if isinstance(surface_texts_raw, str):
+                surface_texts = [
+                    text.strip()
+                    for text in surface_texts_raw.split("|")
+                    if text.strip()
+                ]
+            else:
+                surface_texts = list(surface_texts_raw)
+
+            create_entity(
+                bundle,
+                entity_id=entity_id,
+                label=label,
+                surface_texts=surface_texts,
+            )
+            created += 1
+        except EntityAlreadyExistsError as exc:
+            errors.append({"row": index, "error": f"Entity '{exc}' already exists"})
+        except (KeyError, TypeError, ValueError) as exc:
+            errors.append({"row": index, "error": str(exc)})
+
+    return {"created": created, "errors": errors}
 
 
 def get_entity(bundle: NamespaceBundle, entity_id: str) -> dict | None:
@@ -107,6 +152,45 @@ def add_surface_text(
     }
 
 
+def update_entity(
+    bundle: NamespaceBundle,
+    entity_id: str,
+    label: str | None = None,
+    surface_texts: list[str] | None = None,
+) -> dict:
+    if not bundle.entity_model.has_entity(entity_id):
+        raise EntityNotFoundError(entity_id)
+
+    if label is not None:
+        bundle.entity_model.update_label(entity_id, label)
+
+    if surface_texts is not None:
+        bundle.entity_model.update_surface_texts(entity_id, surface_texts)
+
+    bundle.entity_model.save(bundle.entity_conn)
+
+    if surface_texts is not None:
+        # The fuzzy-match dictionary has no incremental removal - reindex
+        # everything, same as after a rollback (see versioning.py).
+        from talkingdb_nel.services.namespace.versioning import rebuild_dictionary
+
+        rebuild_dictionary(bundle)
+
+    return get_entity(bundle, entity_id)
+
+
+def delete_entity(bundle: NamespaceBundle, entity_id: str) -> None:
+    if not bundle.entity_model.has_entity(entity_id):
+        raise EntityNotFoundError(entity_id)
+
+    bundle.entity_model.remove_entity(entity_id)
+    bundle.entity_model.save(bundle.entity_conn)
+
+    from talkingdb_nel.services.namespace.versioning import rebuild_dictionary
+
+    rebuild_dictionary(bundle)
+
+
 def create_fact(
     bundle: NamespaceBundle,
     source: str,
@@ -137,6 +221,55 @@ def get_fact(bundle: NamespaceBundle, fact_id: str) -> dict | None:
 
 def list_facts(bundle: NamespaceBundle) -> list[dict]:
     return list(bundle.entity_model.iter_facts())
+
+
+def update_fact(
+    bundle: NamespaceBundle,
+    fact_id: str,
+    predicate: str | None = None,
+    attributes: dict | None = None,
+) -> dict:
+    existing = bundle.entity_model.get_fact(fact_id)
+
+    if existing is None:
+        raise FactNotFoundError(fact_id)
+
+    source = existing["source"]
+    target = existing["target"]
+    new_predicate = existing["predicate"] if predicate is None else predicate
+
+    if attributes is None:
+        attributes = {
+            key: value
+            for key, value in existing.items()
+            if key not in {"id", "source", "target", "predicate"}
+        }
+
+    bundle.entity_model.remove_fact(fact_id)
+    bundle.entity_model.add_fact(
+        source=source,
+        target=target,
+        predicate=new_predicate,
+        fact_id=fact_id,
+        **attributes,
+    )
+    bundle.entity_model.save(bundle.entity_conn)
+
+    return {
+        "id": fact_id,
+        "source": source,
+        "target": target,
+        "predicate": new_predicate,
+        **attributes,
+    }
+
+
+def delete_fact(bundle: NamespaceBundle, fact_id: str) -> None:
+    if bundle.entity_model.get_fact(fact_id) is None:
+        raise FactNotFoundError(fact_id)
+
+    bundle.entity_model.remove_fact(fact_id)
+    bundle.entity_model.save(bundle.entity_conn)
 
 
 def _suggestion_parts(suggestion):
@@ -247,6 +380,39 @@ def create_regex(bundle: NamespaceBundle, entity_id: str, regex: str) -> dict:
     bundle.regex_model.save(bundle.regex_conn)
 
     return {"entity_id": entity_id, "regex": regex}
+
+
+def list_regex_rules(bundle: NamespaceBundle, entity_id: str) -> list[str]:
+    if not bundle.entity_model.has_entity(entity_id):
+        raise EntityNotFoundError(entity_id)
+
+    return [rule.pattern for rule in bundle.regex_model.rules.get(entity_id, [])]
+
+
+def update_regex_rule(
+    bundle: NamespaceBundle,
+    entity_id: str,
+    old_pattern: str,
+    new_pattern: str,
+) -> dict:
+    try:
+        bundle.regex_model.remove_pattern(entity_id, old_pattern)
+    except (KeyError, ValueError) as exc:
+        raise RegexRuleNotFoundError(old_pattern) from exc
+
+    bundle.regex_model.add_rule(entity_id, new_pattern)
+    bundle.regex_model.save(bundle.regex_conn)
+
+    return {"entity_id": entity_id, "regex": new_pattern}
+
+
+def delete_regex_rule(bundle: NamespaceBundle, entity_id: str, pattern: str) -> None:
+    try:
+        bundle.regex_model.remove_pattern(entity_id, pattern)
+    except (KeyError, ValueError) as exc:
+        raise RegexRuleNotFoundError(pattern) from exc
+
+    bundle.regex_model.save(bundle.regex_conn)
 
 
 def get_surface_texts(

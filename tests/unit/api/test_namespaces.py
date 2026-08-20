@@ -84,6 +84,49 @@ def test_get_namespace_not_found(client, monkeypatch):
     assert response.status_code == 404
 
 
+def test_update_namespace_success(client, monkeypatch):
+    monkeypatch.setattr(
+        namespaces.store,
+        "update_namespace",
+        lambda conn, name, description: {
+            "name": name,
+            "description": description,
+            "created_at": "2026-01-01T00:00:00+00:00",
+        },
+    )
+
+    response = client.patch(f"/api/namespaces/{NS}", json={"description": "updated"})
+
+    assert response.status_code == 200
+    assert response.json()["description"] == "updated"
+
+
+def test_update_namespace_not_found(client, monkeypatch):
+    def raise_not_found(conn, name, description):
+        raise store.NamespaceNotFoundError(name)
+
+    monkeypatch.setattr(namespaces.store, "update_namespace", raise_not_found)
+
+    response = client.patch(f"/api/namespaces/{NS}", json={"description": "updated"})
+
+    assert response.status_code == 404
+
+
+def test_delete_namespace_success(client, monkeypatch):
+    called = []
+
+    monkeypatch.setattr(
+        namespaces,
+        "purge_namespace_data",
+        lambda bundle: called.append(bundle.namespace),
+    )
+
+    response = client.delete(f"/api/namespaces/{NS}")
+
+    assert response.status_code == 204
+    assert called == [NS]
+
+
 def test_create_commit(client, monkeypatch):
     monkeypatch.setattr(
         namespaces,

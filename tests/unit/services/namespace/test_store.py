@@ -33,6 +33,47 @@ def test_get_namespace_missing_returns_none(conn):
     assert store.get_namespace(conn, "nope") is None
 
 
+def test_update_namespace_description(conn):
+    store.create_namespace(conn, "ns1", description="original")
+
+    updated = store.update_namespace(conn, "ns1", "new description")
+
+    assert updated["description"] == "new description"
+    assert store.get_namespace(conn, "ns1")["description"] == "new description"
+
+
+def test_update_namespace_missing_raises(conn):
+    with pytest.raises(store.NamespaceNotFoundError):
+        store.update_namespace(conn, "nope", "description")
+
+
+def test_delete_namespace_removes_namespace_and_commits(conn):
+    store.create_namespace(conn, "ns1")
+    store.create_commit(conn, "ns1", "first", {})
+
+    store.delete_namespace(conn, "ns1")
+
+    assert store.namespace_exists(conn, "ns1") is False
+    assert store.list_commits(conn, "ns1") == []
+
+
+def test_delete_namespace_missing_raises(conn):
+    with pytest.raises(store.NamespaceNotFoundError):
+        store.delete_namespace(conn, "nope")
+
+
+def test_delete_namespace_scoped_to_namespace(conn):
+    store.create_namespace(conn, "ns1")
+    store.create_namespace(conn, "ns2")
+    store.create_commit(conn, "ns2", "ns2 commit", {})
+
+    store.delete_namespace(conn, "ns1")
+
+    assert store.namespace_exists(conn, "ns1") is False
+    assert store.namespace_exists(conn, "ns2") is True
+    assert len(store.list_commits(conn, "ns2")) == 1
+
+
 def test_create_namespace_duplicate_raises(conn):
     store.create_namespace(conn, "ns1")
 

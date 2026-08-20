@@ -1,13 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import {
-  commitNamespace,
-  getCommit,
-  listCommits,
-  rollbackNamespace,
-  type Commit,
-  type CommitDetail,
-} from '../api'
+import { commitNamespace, listCommits, type Commit } from '../api'
 import { useNamespaceContext } from './namespaceContext'
+import CommitDetailPanel from '../panels/CommitDetailPanel'
 
 export default function NamespaceHistory() {
   const { namespace } = useNamespaceContext()
@@ -15,6 +9,7 @@ export default function NamespaceHistory() {
   const [commits, setCommits] = useState<Commit[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedCommit, setSelectedCommit] = useState<Commit | null>(null)
 
   useEffect(() => {
     listCommits(namespace)
@@ -36,14 +31,30 @@ export default function NamespaceHistory() {
         {!loading && commits.length === 0 && <p className="muted">No commits yet</p>}
         <ul className="plain-list">
           {commits.map((commit) => (
-            <CommitRow
-              key={commit.commit_id}
-              commit={commit}
-              onRolledBack={(newCommit) => setCommits((current) => [newCommit, ...current])}
-            />
+            <li key={commit.commit_id}>
+              <div className="commit-row">
+                <div>
+                  <code>{commit.commit_id.slice(0, 8)}</code> - {commit.message}
+                  <p className="muted small">{new Date(commit.created_at).toLocaleString()}</p>
+                </div>
+                <div className="commit-actions">
+                  <button type="button" onClick={() => setSelectedCommit(commit)}>
+                    Details
+                  </button>
+                </div>
+              </div>
+            </li>
           ))}
         </ul>
       </section>
+
+      <CommitDetailPanel
+        key={selectedCommit?.commit_id ?? 'commit-panel-closed'}
+        namespace={namespace}
+        commit={selectedCommit}
+        onOpenChange={() => setSelectedCommit(null)}
+        onRolledBack={(newCommit) => setCommits((current) => [newCommit, ...current])}
+      />
     </div>
   )
 }
@@ -95,97 +106,5 @@ function CommitForm({ onCreated }: { onCreated: (commit: Commit) => void }) {
         </button>
       </form>
     </section>
-  )
-}
-
-function CommitRow({
-  commit,
-  onRolledBack,
-}: {
-  commit: Commit
-  onRolledBack: (commit: Commit) => void
-}) {
-  const { namespace } = useNamespaceContext()
-  const [expanded, setExpanded] = useState(false)
-  const [detail, setDetail] = useState<CommitDetail | null>(null)
-  const [detailLoading, setDetailLoading] = useState(false)
-  const [detailError, setDetailError] = useState<string | null>(null)
-  const [rollingBack, setRollingBack] = useState(false)
-  const [rollbackError, setRollbackError] = useState<string | null>(null)
-  const [rolledBackTo, setRolledBackTo] = useState(false)
-
-  async function handleToggleDetails() {
-    const next = !expanded
-    setExpanded(next)
-
-    if (next && !detail) {
-      setDetailLoading(true)
-      setDetailError(null)
-
-      try {
-        setDetail(await getCommit(namespace, commit.commit_id))
-      } catch (err) {
-        setDetailError(err instanceof Error ? err.message : 'Failed to load commit details')
-      } finally {
-        setDetailLoading(false)
-      }
-    }
-  }
-
-  async function handleRollback() {
-    setRollingBack(true)
-    setRollbackError(null)
-
-    try {
-      const newCommit = await rollbackNamespace(namespace, commit.commit_id)
-      onRolledBack(newCommit)
-      setRolledBackTo(true)
-    } catch (err) {
-      setRollbackError(err instanceof Error ? err.message : 'Failed to roll back')
-    } finally {
-      setRollingBack(false)
-    }
-  }
-
-  return (
-    <li>
-      <div className="commit-row">
-        <div>
-          <code>{commit.commit_id.slice(0, 8)}</code> - {commit.message}
-          <p className="muted small">{new Date(commit.created_at).toLocaleString()}</p>
-        </div>
-        <div className="commit-actions">
-          <button type="button" onClick={handleToggleDetails}>
-            {expanded ? 'Hide details' : 'Details'}
-          </button>
-          <button type="button" onClick={handleRollback} disabled={rollingBack}>
-            {rollingBack ? 'Rolling back…' : 'Roll back to this commit'}
-          </button>
-        </div>
-      </div>
-
-      {rolledBackTo && <p className="muted small">Rolled back - see the new commit above</p>}
-      {rollbackError && <p className="error">{rollbackError}</p>}
-
-      {expanded && (
-        <div className="commit-detail">
-          {detailLoading && <p>Loading details…</p>}
-          {detailError && <p className="error">{detailError}</p>}
-          {detail && (
-            <>
-              <p className="muted small">
-                {detail.snapshot.entities.nodes.length} entities,{' '}
-                {detail.snapshot.entities.edges.length} facts,{' '}
-                {Object.keys(detail.snapshot.regex_rules).length} regex rule sets
-              </p>
-              <details>
-                <summary>Raw snapshot JSON</summary>
-                <pre className="commit-snapshot">{JSON.stringify(detail.snapshot, null, 2)}</pre>
-              </details>
-            </>
-          )}
-        </div>
-      )}
-    </li>
   )
 }

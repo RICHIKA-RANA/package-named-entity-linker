@@ -1,6 +1,25 @@
 import type { Edge, Node } from '@xyflow/react'
 import type { Graph } from './api'
 
+export function filterToNeighborhood(graph: Graph, entityId: string): Graph {
+  const edges = graph.edges.filter(
+    (edge) => edge.source === entityId || edge.target === entityId,
+  )
+
+  const neighborIds = new Set<string>([entityId])
+  edges.forEach((edge) => {
+    neighborIds.add(edge.source)
+    neighborIds.add(edge.target)
+  })
+
+  return {
+    directed: graph.directed,
+    multigraph: graph.multigraph,
+    nodes: graph.nodes.filter((node) => neighborIds.has(node.id)),
+    edges,
+  }
+}
+
 export function toFlowElements(graph: Graph): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = graph.nodes.map((node) => ({
     id: node.id,
